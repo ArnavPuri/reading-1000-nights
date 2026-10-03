@@ -86,7 +86,7 @@ class _CandlePainter extends CustomPainter {
     canvas.drawCircle(Offset(w / 2, bodyTop - h * 0.16), h * 0.2 * grow, glow);
 
     final tip = Offset(w / 2 + w * sway * 4, bodyTop - h * 0.4 * grow);
-    final base = Offset(w / 2, bodyTop - h * 0.05);
+    final base = Offset(w / 2, bodyTop - h * 0.015);
     final fw = w * 0.2;
     final flame = Path()
       ..moveTo(tip.dx, tip.dy)

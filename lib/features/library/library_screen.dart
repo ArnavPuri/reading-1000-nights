@@ -130,7 +130,10 @@ class _NightsList extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Text('$done/3', style: TextStyles.meta),
+                SizedBox(
+                  width: 44,
+                  child: Text('$done/3', textAlign: TextAlign.right, style: TextStyles.meta),
+                ),
               ],
             ),
           ),

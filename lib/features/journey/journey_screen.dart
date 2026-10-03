@@ -55,9 +55,20 @@ class _Stats extends StatelessWidget {
         excludeSemantics: true,
         child: Column(
           children: [
-            Text(
-              value,
-              style: const TextStyle(fontFamily: Tokens.display, fontSize: 42, height: 1.05, color: Tokens.parchment),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontFamily: Tokens.display,
+                    fontSize: 42,
+                    height: 1.05,
+                    color: Tokens.parchment,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             Text(label, style: TextStyles.label(color: Tokens.parchment.withValues(alpha: 0.85), size: 11)),
@@ -183,8 +194,9 @@ class _MapPainter extends CustomPainter {
     for (var d = 8; d <= layout.length; d++) {
       if (lit.contains(d)) continue;
       // thin out the far path so it reads as dots, not a smear
-      if (d > 100 && d % 3 != 0) continue;
-      if (d > 365 && d % 6 != 0) continue;
+      if (d > 30 && d % 2 != 0) continue;
+      if (d > 100 && d % 4 != 0) continue;
+      if (d > 365 && d % 8 != 0) continue;
       canvas.drawCircle(toCanvas(layout.pointFor(d), size), 1.1, faint);
     }
     // first-week figure, unlit
@@ -232,7 +244,12 @@ class _MapPainter extends CustomPainter {
       _label(
         canvas,
         '$m',
-        p + (m == 1000 ? const Offset(-14, 14) : const Offset(-8, -26)),
+        p +
+            switch (m) {
+              7 => const Offset(-26, -10),
+              1000 => const Offset(-14, 14),
+              _ => const Offset(-8, -26),
+            },
         TextStyle(
           fontFamily: Tokens.serif,
           fontSize: 17,
