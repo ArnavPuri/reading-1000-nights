@@ -1,0 +1,22 @@
+night,type,title,author,year,translator,origin,gender,source,source_file,start,end,max_words,label,theme,pull_quote
+1,story,The Nightingale and the Rose,Oscar Wilde,1888,,IE,m,GITenberg/The-Happy-Prince-and-Other-Tales_902,902-0.txt,after=The Nightingale and the Rose.,before=The Selfish Giant.,,,rose,"Ah, on what little things does happiness depend!"
+1,poem,A Dream Within a Dream,Edgar Allan Poe,1849,,US,m,manual,poe-a-dream-within-a-dream.txt,,,,,moon-sea,All that we see or seem is but a dream within a dream.
+1,essay,El Dorado,Robert Louis Stevenson,1878,,GB,m,GITenberg/Virginibus-Puerisque-and-Other-Papers_386,386-0.txt,after=EL DORADO,before=THE ENGLISH ADMIRALS,,,road,"To travel hopefully is a better thing than to arrive, and the true success is to labour."
+2,story,The Gift of the Magi,O. Henry,1905,,US,m,GITenberg/The-Four-Million_2776,2776.txt,after=THE GIFT OF THE MAGI#2,before=A COSMOPOLITE IN A CAFE,,,city,One dollar and eighty-seven cents. That was all.
+2,poem,Hope,Emily Dickinson,1891,,US,f,GITenberg/Poems-by-Emily-Dickinson-Three-Series-Complete_12242,12242.txt,at=Hope is the thing with feathers,blank=3,,,bird,Hope is the thing with feathers that perches in the soul.
+2,essay,On Reading and Books,Arthur Schopenhauer,1851,Mrs. Rudolf Dircks (1897),DE,m,GITenberg/Essays-of-Schopenhauer_11945,11945-0.txt,after=ON READING AND BOOKS.,before=THE EMPTINESS OF EXISTENCE.,1900,from,candle,
+3,story,Araby,James Joyce,1914,,IE,m,GITenberg/Dubliners_2814,2814-0.txt,after=ARABY,before=EVELINE,,,city,
+3,poem,Where the Mind Is Without Fear,Rabindranath Tagore,1912,Rabindranath Tagore (1912),IN,m,GITenberg/Gitanjali_7164,7164.txt,at=Where the mind is without fear,blank=2,,,night-sky,Where the mind is without fear and the head is held high.
+3,essay,Walking Tours,Robert Louis Stevenson,1876,,GB,m,GITenberg/Virginibus-Puerisque-and-Other-Papers_386,386-0.txt,after=WALKING TOURS,before=PAN’S PIPES,2000,from,road,
+4,story,Désirée's Baby,Kate Chopin,1893,,US,f,GITenberg/The-Awakening-and-Selected-Short-Stories_160,160-0.txt,after=DESIREE'S BABY,before=A RESPECTABLE WOMAN,,,garden,
+4,poem,When I Heard the Learn'd Astronomer,Walt Whitman,1865,,US,m,GITenberg/Leaves-of-Grass_1322,1322.txt,after=When I Heard the Learn'd Astronomer,blank=3,,,night-sky,Look'd up in perfect silence at the stars.
+4,essay,Walking,Henry David Thoreau,1862,,US,m,GITenberg/Walking_1022,1022-0.txt,at=I wish to speak a word for Nature,eof,1900,from,forest,
+5,story,The Little Match-Seller,Hans Christian Andersen,1845,H. P. Paull (1872),DK,m,GITenberg/Fairy-Tales-of-Hans-Christian-Andersen_27200,27200.txt,after=THE LITTLE MATCH-SELLER,before=THE LITTLE MERMAID,,,candle,
+5,poem,How Do I Love Thee?,Elizabeth Barrett Browning,1850,,GB,f,GITenberg/Sonnets-from-the-Portuguese_2002,2002-0.txt,after=XLIII,blank=3,,Sonnet 43,rose,I love thee to the depth and breadth and height my soul can reach.
+5,essay,The Cup of Humanity,Kakuzo Okakura,1906,,JP,m,GITenberg/The-Book-of-Tea_769,769.txt,at=Tea began as a medicine,before=II. The Schools of Tea.,1900,from,tea,
+6,story,Dr. Heidegger's Experiment,Nathaniel Hawthorne,1837,,US,m,GITenberg/Twice-Told-Tales_13707,13707.txt,after=DR. HEIDEGGER'S EXPERIMENT.,before=LEGENDS OF THE PROVINCE-HOUSE.,,,rose,
+6,poem,A Noiseless Patient Spider,Walt Whitman,1868,,US,m,GITenberg/Leaves-of-Grass_1322,1322.txt,after=A Noiseless Patient Spider,blank=3,,,night-sky,"And you O my soul where you stand, surrounded, detached, in measureless oceans of space."
+6,essay,The Common Reader,Virginia Woolf,1925,,GB,f,GITenberg/The-Common-Reader_64457,64457-0.txt,at=There is a sentence in Dr. Johnson's,before=_The Pastons and Chaucer_[1],,,candle,
+7,story,Kew Gardens,Virginia Woolf,1919,,GB,f,GITenberg/Monday-or-Tuesday_29220,29220.txt,after=KEW GARDENS,before=THE MARK ON THE WALL,,,garden,
+7,poem,The Chariot,Emily Dickinson,1890,,US,f,GITenberg/Poems-by-Emily-Dickinson-Three-Series-Complete_12242,12242.txt,at=Because I could not stop for Death,blank=3,,,road,"Because I could not stop for Death, he kindly stopped for me."
+7,essay,On Noise,Arthur Schopenhauer,1851,Mrs. Rudolf Dircks (1897),DE,m,GITenberg/Essays-of-Schopenhauer_11945,11945-0.txt,after=ON NOISE.,before=ON READING AND BOOKS.,1700,from,city,
