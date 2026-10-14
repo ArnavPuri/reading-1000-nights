@@ -65,6 +65,15 @@ class HighlightWithWork {
   final Work work;
 }
 
+class FavoriteWithWork {
+  const FavoriteWithWork(this.favorite, this.work, this.dayNumber);
+  final Favorite favorite;
+  final Work work;
+
+  /// The night the work belongs to, for opening it in the reader.
+  final int dayNumber;
+}
+
 /// All reads and writes of reading state. Pure rules live in lib/domain;
 /// this class loads state, applies them and stores the result.
 class ReadingRepository {
@@ -116,7 +125,9 @@ class ReadingRepository {
 
   /// Fires whenever any reading-state table changes.
   Stream<void> get changes => db
-      .tableUpdates(TableUpdateQuery.onAllTables([db.nights, db.progress, db.streak, db.highlights, db.days]))
+      .tableUpdates(
+        TableUpdateQuery.onAllTables([db.nights, db.progress, db.streak, db.highlights, db.favorites, db.days]),
+      )
       .map((_) {});
 
   Future<TonightView> tonight() async {
@@ -196,6 +207,22 @@ class ReadingRepository {
     final q = db.select(db.highlights).join([innerJoin(db.works, db.works.id.equalsExp(db.highlights.workId))])
       ..orderBy([OrderingTerm.desc(db.highlights.createdAt)]);
     return [for (final r in await q.get()) HighlightWithWork(r.readTable(db.highlights), r.readTable(db.works))];
+  }
+
+  Future<bool> isFavorite(String workId) async =>
+      await (db.select(db.favorites)..where((f) => f.workId.equals(workId))).getSingleOrNull() != null;
+
+  /// Favourites, newest first, with the night each work belongs to.
+  Future<List<FavoriteWithWork>> favorites() async {
+    final q = db.select(db.favorites).join([innerJoin(db.works, db.works.id.equalsExp(db.favorites.workId))])
+      ..orderBy([OrderingTerm.desc(db.favorites.createdAt)]);
+    final rows = await q.get();
+    final days = await _dayNumbersOf([for (final r in rows) r.readTable(db.favorites).workId]);
+    return [
+      for (final r in rows)
+        if (days[r.readTable(db.favorites).workId] case final day?)
+          FavoriteWithWork(r.readTable(db.favorites), r.readTable(db.works), day),
+    ];
   }
 
   // ------------------------------------------------------------------------
@@ -285,6 +312,19 @@ class ReadingRepository {
 
   Future<void> removeHighlight(int id) => (db.delete(db.highlights)..where((h) => h.id.equals(id))).go();
 
+  /// Adds or removes [workId] from the favourites. Returns the new state.
+  Future<bool> toggleFavorite(String workId, {required DateTime now}) async {
+    final added = await db.transaction(() async {
+      final removed = await (db.delete(db.favorites)..where((f) => f.workId.equals(workId))).go();
+      if (removed > 0) return false;
+      await db.into(db.favorites).insert(FavoritesCompanion.insert(workId: workId, createdAt: now));
+      return true;
+    });
+    final day = (await _dayNumbersOf([workId]))[workId];
+    analytics.track(added ? AnalyticsEvent.favoriteAdded : AnalyticsEvent.favoriteRemoved, dayNumber: day);
+    return added;
+  }
+
   // ------------------------------------------------------------------------
   // Debug
   // ------------------------------------------------------------------------
@@ -355,6 +395,21 @@ class ReadingRepository {
   Future<Day?> _day(int n) => (db.select(db.days)..where((d) => d.dayNumber.equals(n))).getSingleOrNull();
 
   Future<bool> _hasContent(int n) async => await _day(n) != null;
+
+  /// The night each of [workIds] belongs to. Works not on any night are left out.
+  Future<Map<String, int>> _dayNumbersOf(List<String> workIds) async {
+    if (workIds.isEmpty) return const {};
+    final days =
+        await (db.select(db.days)
+              ..where((d) => d.storyId.isIn(workIds) | d.poemId.isIn(workIds) | d.essayId.isIn(workIds))
+              ..orderBy([(d) => OrderingTerm.desc(d.dayNumber)]))
+            .get();
+    // Newest night first, so later rows win: a work on two nights maps to the earlier one.
+    return {
+      for (final d in days)
+        for (final id in [d.storyId, d.poemId, d.essayId]) id: d.dayNumber,
+    };
+  }
 
   Future<List<Work>> _worksFor(Day day) async {
     final ids = [day.storyId, day.poemId, day.essayId];

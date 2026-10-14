@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
+import '../../core/router.dart';
 import '../../core/theme.dart';
 import '../../data/reading_repository.dart';
 import '../journey/journey_screen.dart';
 
-/// Unlocked nights, newest first, plus a Highlights view. Re-reading any
-/// past night is always allowed.
+/// Unlocked nights, newest first, plus Highlights and Saved (favourites)
+/// views. Re-reading any past night is always allowed.
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
@@ -15,8 +17,10 @@ class LibraryScreen extends ConsumerStatefulWidget {
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
+enum _Tab { nights, highlights, saved }
+
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  var _highlights = false;
+  var _tab = _Tab.nights;
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +38,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             padding: const EdgeInsets.symmetric(horizontal: Tokens.gutter),
             child: Row(
               children: [
-                _Segment(label: 'NIGHTS', selected: !_highlights, onTap: () => setState(() => _highlights = false)),
-                const SizedBox(width: 24),
-                _Segment(label: 'HIGHLIGHTS', selected: _highlights, onTap: () => setState(() => _highlights = true)),
+                for (final (tab, label) in const [
+                  (_Tab.nights, 'NIGHTS'),
+                  (_Tab.highlights, 'HIGHLIGHTS'),
+                  (_Tab.saved, 'SAVED'),
+                ]) ...[
+                  if (tab != _Tab.nights) const SizedBox(width: 24),
+                  _Segment(label: label, selected: _tab == tab, onTap: () => setState(() => _tab = tab)),
+                ],
               ],
             ),
           ),
           const SizedBox(height: 8),
-          Expanded(child: _highlights ? const _HighlightsList() : const _NightsList()),
+          Expanded(
+            child: switch (_tab) {
+              _Tab.nights => const _NightsList(),
+              _Tab.highlights => const _HighlightsList(),
+              _Tab.saved => const _SavedList(),
+            },
+          ),
         ],
       ),
     );
@@ -184,6 +199,53 @@ class _HighlightsList extends ConsumerWidget {
                   style: TextStyles.label(color: Tokens.parchmentDim, size: 10),
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SavedList extends ConsumerWidget {
+  const _SavedList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(favoritesProvider).value ?? const [];
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(Tokens.gutter),
+        child: Text('Tap the ribbon while reading to keep a piece here.', style: TextStyles.byline),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(Tokens.gutter, 8, Tokens.gutter, 24),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => Divider(color: Tokens.hairline, height: 1),
+      itemBuilder: (context, i) {
+        final f = items[i];
+        return Dismissible(
+          key: ValueKey(f.work.id),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) => ref.read(repositoryProvider).toggleFavorite(f.work.id, now: ref.read(clockProvider)()),
+          child: InkWell(
+            onTap: () => context.push(Routes.read(f.dayNumber, f.work.id)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${f.work.type.toUpperCase()}  ·  NIGHT ${f.dayNumber}',
+                    style: TextStyles.label(color: Tokens.parchmentDim, size: 10),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(f.work.title, style: const TextStyle(fontSize: 19, height: 1.3, color: Tokens.parchment)),
+                  const SizedBox(height: 4),
+                  Text(f.work.author, style: TextStyles.meta),
+                ],
+              ),
             ),
           ),
         );

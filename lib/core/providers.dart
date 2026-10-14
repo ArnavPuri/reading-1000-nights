@@ -70,4 +70,8 @@ final workHighlightsProvider = StreamProvider.family<List<Highlight>, String>(
   (ref, id) => _watch(ref, (r) => r.highlightsFor(id)),
 );
 
+final favoritesProvider = StreamProvider<List<FavoriteWithWork>>((ref) => _watch(ref, (r) => r.favorites()));
+
+final isFavoriteProvider = StreamProvider.family<bool, String>((ref, id) => _watch(ref, (r) => r.isFavorite(id)));
+
 final weekProvider = StreamProvider<List<bool>>((ref) => _watch(ref, (r) => r.week(todayOf(ref.read))));

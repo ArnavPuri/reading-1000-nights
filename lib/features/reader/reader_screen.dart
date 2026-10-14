@@ -173,7 +173,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
             children: [
               _TopBar(
                 color: theme.text,
+                accent: theme.accent,
+                isFavorite: ref.watch(isFavoriteProvider(widget.workId)).value ?? false,
                 onBack: () => context.canPop() ? context.pop() : context.go(Routes.tonight),
+                onFavorite: () {
+                  HapticFeedback.lightImpact();
+                  _repo.toggleFavorite(widget.workId, now: ref.read(clockProvider)());
+                },
                 onSettings: () => showReaderSettings(context, ref),
               ),
               Expanded(
@@ -237,10 +243,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.color, required this.onBack, required this.onSettings});
+  const _TopBar({
+    required this.color,
+    required this.accent,
+    required this.isFavorite,
+    required this.onBack,
+    required this.onFavorite,
+    required this.onSettings,
+  });
 
   final Color color;
+  final Color accent;
+  final bool isFavorite;
   final VoidCallback onBack;
+  final VoidCallback onFavorite;
   final VoidCallback onSettings;
 
   @override
@@ -262,6 +278,25 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          Semantics(
+            button: true,
+            label: 'Favourite',
+            selected: isFavorite,
+            excludeSemantics: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onFavorite,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 13, 4, 13),
+                child: LineIconView(
+                  LineIcon.bookmark,
+                  size: 22,
+                  filled: isFavorite,
+                  color: isFavorite ? accent : color.withValues(alpha: 0.85),
+                ),
+              ),
+            ),
+          ),
           Semantics(
             button: true,
             label: 'Reading settings',

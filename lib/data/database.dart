@@ -88,6 +88,17 @@ class Highlights extends Table {
   DateTimeColumn get createdAt => dateTime()();
 }
 
+/// Not in the PRD schema: pieces the user keeps (Library → Saved). Added in
+/// schema version 2.
+@DataClassName('Favorite')
+class Favorites extends Table {
+  TextColumn get workId => text().references(Works, #id)();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {workId};
+}
+
 /// Single row (id = 1).
 @DataClassName('SettingsRow')
 class Settings extends Table {
@@ -115,12 +126,12 @@ class ImportedPacks extends Table {
   Set<Column> get primaryKey => {packId};
 }
 
-@DriftDatabase(tables: [Works, Days, Progress, Nights, Streak, Highlights, Settings, ImportedPacks])
+@DriftDatabase(tables: [Works, Days, Progress, Nights, Streak, Highlights, Favorites, Settings, ImportedPacks])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -128,6 +139,9 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
       await into(streak).insert(const StreakCompanion());
       await into(settings).insert(const SettingsCompanion());
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.createTable(favorites);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -141,6 +155,7 @@ class AppDatabase extends _$AppDatabase {
     await delete(progress).go();
     await delete(nights).go();
     await delete(highlights).go();
+    await delete(favorites).go();
     await update(streak).write(
       const StreakCompanion(
         current: Value(0),

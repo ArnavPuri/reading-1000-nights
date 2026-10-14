@@ -2218,6 +2218,186 @@ class HighlightsCompanion extends UpdateCompanion<Highlight> {
   }
 }
 
+class $FavoritesTable extends Favorites with TableInfo<$FavoritesTable, Favorite> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FavoritesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _workIdMeta = const VerificationMeta('workId');
+  @override
+  late final GeneratedColumn<String> workId = GeneratedColumn<String>(
+    'work_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES works (id)'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [workId, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'favorites';
+  @override
+  VerificationContext validateIntegrity(Insertable<Favorite> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('work_id')) {
+      context.handle(_workIdMeta, workId.isAcceptableOrUnknown(data['work_id']!, _workIdMeta));
+    } else if (isInserting) {
+      context.missing(_workIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {workId};
+  @override
+  Favorite map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Favorite(
+      workId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}work_id'])!,
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $FavoritesTable createAlias(String alias) {
+    return $FavoritesTable(attachedDatabase, alias);
+  }
+}
+
+class Favorite extends DataClass implements Insertable<Favorite> {
+  final String workId;
+  final DateTime createdAt;
+  const Favorite({required this.workId, required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['work_id'] = Variable<String>(workId);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  FavoritesCompanion toCompanion(bool nullToAbsent) {
+    return FavoritesCompanion(workId: Value(workId), createdAt: Value(createdAt));
+  }
+
+  factory Favorite.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Favorite(
+      workId: serializer.fromJson<String>(json['workId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'workId': serializer.toJson<String>(workId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Favorite copyWith({String? workId, DateTime? createdAt}) =>
+      Favorite(workId: workId ?? this.workId, createdAt: createdAt ?? this.createdAt);
+  Favorite copyWithCompanion(FavoritesCompanion data) {
+    return Favorite(
+      workId: data.workId.present ? data.workId.value : this.workId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Favorite(')
+          ..write('workId: $workId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(workId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Favorite && other.workId == this.workId && other.createdAt == this.createdAt);
+}
+
+class FavoritesCompanion extends UpdateCompanion<Favorite> {
+  final Value<String> workId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const FavoritesCompanion({
+    this.workId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FavoritesCompanion.insert({required String workId, required DateTime createdAt, this.rowid = const Value.absent()})
+    : workId = Value(workId),
+      createdAt = Value(createdAt);
+  static Insertable<Favorite> custom({
+    Expression<String>? workId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (workId != null) 'work_id': workId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FavoritesCompanion copyWith({Value<String>? workId, Value<DateTime>? createdAt, Value<int>? rowid}) {
+    return FavoritesCompanion(
+      workId: workId ?? this.workId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (workId.present) {
+      map['work_id'] = Variable<String>(workId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FavoritesCompanion(')
+          ..write('workId: $workId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SettingsTable extends Settings with TableInfo<$SettingsTable, SettingsRow> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -2808,6 +2988,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $NightsTable nights = $NightsTable(this);
   late final $StreakTable streak = $StreakTable(this);
   late final $HighlightsTable highlights = $HighlightsTable(this);
+  late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $ImportedPacksTable importedPacks = $ImportedPacksTable(this);
   @override
@@ -2820,6 +3001,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     nights,
     streak,
     highlights,
+    favorites,
     settings,
     importedPacks,
   ];
