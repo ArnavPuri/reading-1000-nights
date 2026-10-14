@@ -576,26 +576,20 @@ img.resize((600, 400), Image.LANCZOS).save(f"{out}/{name}.webp", "WEBP", quality
 EOF
 ```
 
-3. Theme images overwrite the placeholders of the same name. After that, do not run `placeholder_art.py` again: it rewrites all ten theme files. Retire it, or make it skip files that exist.
+3. Theme images overwrite the placeholders of the same name. `placeholder_art.py` now keeps files that exist, so it will not overwrite real art unless run with `--force`.
 
 ### Point works at their own image
 
-Today `build_pack.py` ignores per-work files. It sets every work's image from the master sheet's `theme` column:
+`build_pack.py` picks each work's image like this: `images/<work id>.webp` if that file exists at both 1x and 2x, otherwise `images/<theme>.webp` from the master sheet. The build fails if neither exists. The measure report in `content/reports/` has an **Art** column that says which one each work got (`own` or `theme`). So dropping in a per-work file is enough; no sheet change is needed. The `theme` column stays as the fallback until a work's own art is approved.
 
-```python
-"image_path": f"assets/packs/pack-{pack_id:03d}/images/{r.theme}.webp",
-```
-
-It needs one change: use `images/<work id>.webp` when that file exists at both 1x and 2x, and fall back to `images/<theme>.webp` otherwise. The build should fail if neither exists, and the measure report in `content/reports/` should gain a column saying which image each work got (own or theme). The `theme` column stays: it is the fallback, and it is what a work uses until its own art is approved. An optional `image` column in the master sheet could override both, for example to share one image across "Part 1 of 3" to "Part 3 of 3".
-
-The pack `version` also needs to change. `build_pack.py` always writes `"version": 1`, and the importer (`lib/data/content_pack.dart`) skips a pack whose version it already has. A device or simulator that imported version 1 would keep the old placeholder paths. Add a `--version` flag (or bump the constant) so new art ships as version 2. In development, the debug menu reset or a reinstall also works.
+Bump the pack version when the art changes: `build_pack.py --version 2`. The importer (`lib/data/content_pack.dart`) skips a pack whose version it already has, so a device that imported version 1 would keep the old paths. In development, the debug menu reset or a reinstall also works.
 
 Packs 2 and 3 will download from the CDN. The card uses `Image.asset`, which only reads bundled files, so downloaded art will need a file-based image path. That is phase 4 work, noted here so the per-work file names stay the same.
 
 ### Rebuild and check
 
 ```bash
-python3 content/tools/build_pack.py --pack 1 --nights 1-7
+python3 content/tools/build_pack.py --pack 1 --nights 1-7 --version 2
 flutter test
 flutter test test/screenshots --dart-define=SCREENSHOTS=true
 python3 tool/frame_screenshots.py

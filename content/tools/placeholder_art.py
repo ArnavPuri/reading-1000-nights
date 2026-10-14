@@ -319,10 +319,14 @@ def render(name: str) -> Image.Image:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pack", type=int, default=1)
+    ap.add_argument("--force", action="store_true", help="overwrite existing files, including real art")
     a = ap.parse_args()
     out = ROOT / "assets" / "packs" / f"pack-{a.pack:03d}" / "images"
     (out / "2.0x").mkdir(parents=True, exist_ok=True)
     for name in THEMES:
+        if not a.force and ((out / f"{name}.webp").exists() or (out / "2.0x" / f"{name}.webp").exists()):
+            print("kept", name, "(exists; --force to overwrite)")
+            continue
         img = render(name)
         img.save(out / "2.0x" / f"{name}.webp", "WEBP", quality=72, method=6)
         img.resize((W // 2, H // 2), Image.LANCZOS).save(out / f"{name}.webp", "WEBP", quality=78, method=6)

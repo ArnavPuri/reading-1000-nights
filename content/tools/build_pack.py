@@ -5,7 +5,11 @@ Steps (PRD "Pipeline"): fetch -> cut -> clean -> measure -> pack.
 Review and illustration are manual/separate steps.
 
 Usage:
-    python3 content/tools/build_pack.py --pack 1 --nights 1-7
+    python3 content/tools/build_pack.py --pack 1 --nights 1-7 [--version 2]
+
+Card art: a work uses images/<work id>.webp when that file exists at 1x and
+2x, and falls back to images/<theme>.webp otherwise. Bump --version when the
+art or text changes, or installed apps keep the pack they already imported.
 
 Sources are fetched from the GITenberg mirror of Project Gutenberg texts
 (raw.githubusercontent.com) and cached in content/.cache. Rows whose source
@@ -270,7 +274,16 @@ def rights_note(r: Row) -> str:
     return note
 
 
-def build(pack_id: int, first: int, last: int) -> int:
+def image_for(pack_id: int, wid: str, theme: str) -> tuple[str | None, str]:
+    """The work's own engraving if it exists at both sizes, else its theme's."""
+    images = PACK_OUT / f"pack-{pack_id:03d}" / "images"
+    for name, kind in ((wid, "own"), (theme, "theme")):
+        if name and (images / f"{name}.webp").exists() and (images / "2.0x" / f"{name}.webp").exists():
+            return f"assets/packs/pack-{pack_id:03d}/images/{name}.webp", kind
+    return None, "missing"
+
+
+def build(pack_id: int, first: int, last: int, version: int = 1) -> int:
     with open(CONTENT / "master_sheet.csv", newline="", encoding="utf-8") as f:
         rows = [Row(**{**r, "night": int(r["night"]), "year": int(r["year"])})
                 for r in csv.DictReader(f)]
@@ -313,6 +326,10 @@ def build(pack_id: int, first: int, last: int) -> int:
             part_label = ""
 
         wid = f"{slug(r.author.split()[-1])}-{slug(r.title)}"
+        image_path, art = image_for(pack_id, wid, r.theme)
+        if image_path is None:
+            print(f"ART: {r.title}: no images/{wid}.webp or images/{r.theme}.webp at 1x and 2x", file=sys.stderr)
+            problems += 1
         works.append({
             "id": wid,
             "type": r.type,
@@ -323,14 +340,14 @@ def build(pack_id: int, first: int, last: int) -> int:
             "est_minutes": minutes,
             "part_label": part_label or None,
             "text_md": text_md,
-            "image_path": f"assets/packs/pack-{pack_id:03d}/images/{r.theme}.webp",
+            "image_path": image_path,
             "source_ref": (f"manual:{r.source_file}" if r.source == "manual"
                            else f"github.com/{r.source}/{r.source_file}"),
             "rights_note": rights_note(r),
             "pull_quote": r.pull_quote or None,
         })
         days.setdefault(r.night, {"day_number": r.night})[f"{r.type}_id"] = wid
-        report.append((r.night, r.type, r.title, r.author, words, minutes, flag))
+        report.append((r.night, r.type, r.title, r.author, words, minutes, art, flag))
 
     for n, d in days.items():
         missing = {"story_id", "poem_id", "essay_id"} - d.keys()
@@ -341,7 +358,7 @@ def build(pack_id: int, first: int, last: int) -> int:
     pack = {
         "format": PACK_FORMAT,
         "pack_id": pack_id,
-        "version": 1,
+        "version": version,
         "first_day": first,
         "last_day": last,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -355,13 +372,13 @@ def build(pack_id: int, first: int, last: int) -> int:
     REPORTS.mkdir(parents=True, exist_ok=True)
     lines = [f"# Pack {pack_id:03d} measure report", "",
              f"Nights {first}-{last}, {len(works)} pieces, {WPM} wpm.", "",
-             "| Night | Type | Title | Author | Words | Min | Flag |",
-             "| --- | --- | --- | --- | --- | --- | --- |"]
-    for n, t, title, author, w, m, flag in report:
-        lines.append(f"| {n} | {t} | {title} | {author} | {w} | {m} | {flag} |")
+             "| Night | Type | Title | Author | Words | Min | Art | Flag |",
+             "| --- | --- | --- | --- | --- | --- | --- | --- |"]
+    for n, t, title, author, w, m, art, flag in report:
+        lines.append(f"| {n} | {t} | {title} | {author} | {w} | {m} | {art} | {flag} |")
     lines += ["", "| Night | Total min | Flag |", "| --- | --- | --- |"]
     for n in sorted(days):
-        total = sum(m for nn, *_, m, _f in report if nn == n)
+        total = sum(m for nn, *_, m, _art, _f in report if nn == n)
         lo, hi = NIGHT_SIZING
         lines.append(f"| {n} | {total} | {'' if lo <= total <= hi else f'outside {lo}-{hi} min'} |")
     (REPORTS / f"pack-{pack_id:03d}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -375,9 +392,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pack", type=int, default=1)
     ap.add_argument("--nights", default="1-7", help="e.g. 1-30")
+    ap.add_argument("--version", type=int, default=1, help="bump when art or text changes")
     a = ap.parse_args()
     first, last = (int(x) for x in a.nights.split("-"))
-    sys.exit(build(a.pack, first, last))
+    sys.exit(build(a.pack, first, last, a.version))
 
 
 if __name__ == "__main__":
