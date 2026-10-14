@@ -11,8 +11,9 @@ See the [PRD and build plan](docs/PRD.md) and the [progress log](docs/PROGRESS.m
 ![Tonight, Reader and Journey, rendered from the app](docs/screenshots/hero.png)
 
 <sub>These are real screens rendered from the app with the bundled 7-night test pack
-(night 7, after a debug jump). They are not mockups. The card engravings are
-procedural placeholders. The approved mockups are in
+(night 7, after a debug jump). They are not mockups. The card engravings are the
+generated art for nights 1 to 7 (see [docs/illustration-prompts.md](docs/illustration-prompts.md)).
+The approved mockups are in
 [docs/mockups](docs/mockups/approved-mockups.webp).</sub>
 
 ![Tonight mid-night, Night complete, Library, and the Sepia reader theme](docs/screenshots/more.png)

@@ -37,7 +37,8 @@ The three cards are rendered by the screenshot test: [highlight](screenshots/sha
 
 - [x] [illustration-prompts.md](illustration-prompts.md): the style lock, prompt templates for Midjourney, GPT-image and SDXL/Flux, prompts for the 12 theme engravings and for all 21 pieces in nights 1 to 7, and the drop-in steps.
 - [x] `build_pack.py` uses `images/<work id>.webp` when it exists at 1x and 2x and falls back to the theme image. The measure report says which one each work got. `--version` bumps the pack version so installed apps pick up new art. `placeholder_art.py` no longer overwrites existing files without `--force`.
-- [ ] Generate and approve the real art. Decide whether the Nightingale card may keep the mockup's muted red rose (the style lock is amber only).
+- [x] Real art for nights 1 to 7: the 12 theme engravings (the 10 placeholder themes plus `hearth` and `river`) and one engraving for each of the 21 pieces, exported to 1200 x 800 and 600 x 400 WebP. Every work now uses its own image, and pack 1 is version 2. The rose is drawn in parchment, so the red-rose question is moot.
+- [ ] Replace the 2x files with exports from the full-size originals. These were cut from 2x2 review sheets, so most sources were about 665 px wide and the 1200 px files are upscaled. Only "On Noise" came from a full-size image.
 
 
 ## 2026-10-03: Scaffold (phase 0 complete, most of phase 1, parts of phases 2 to 4)
@@ -89,7 +90,7 @@ The three cards are rendered by the screenshot test: [highlight](screenshots/sha
 - [x] Rights check: the 1930 rule is enforced at build time, and every work gets a `rights_note`.
 - [ ] Curate nights 8–90.
 - [ ] Read-through of every piece on a phone.
-- [ ] Real illustrations. 10 procedural placeholders stand in for them.
+- [x] Real illustrations for nights 1 to 7 (2026-10-14).
 
 ### Screenshots
 
