@@ -13,6 +13,8 @@ import '../../core/theme.dart';
 import '../../core/widgets/line_icons.dart';
 import '../../data/database.dart';
 import '../../data/reading_repository.dart';
+import '../share/share_card.dart';
+import '../share/share_sheet.dart';
 import 'md_text.dart';
 import 'reader_settings_sheet.dart';
 
@@ -147,10 +149,24 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
       }
       return;
     }
-    await _repo.addHighlight(widget.workId, mdA, mdB, block.plain.substring(a, b));
+    final text = block.plain.substring(a, b);
+    await _repo.addHighlight(widget.workId, mdA, mdB, text);
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Highlight saved to your Library'), duration: Duration(seconds: 2)));
+    final work = _work;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Highlight saved to your Library'),
+        duration: const Duration(seconds: 4),
+        action: work == null
+            ? null
+            : SnackBarAction(
+                label: 'Share',
+                textColor: ReaderTheme.paper.accent,
+                onPressed: () =>
+                    showSharePreview(context, ref, HighlightShare.of(text, work, dayNumber: widget.dayNumber)),
+              ),
+      ),
+    );
   }
 
   @override

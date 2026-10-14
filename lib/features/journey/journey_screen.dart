@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 import '../../core/router.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/line_icons.dart';
 import '../../data/reading_repository.dart';
+import '../share/share_sheet.dart';
 import '../tonight/reading_card.dart';
 import 'constellation.dart';
 
@@ -35,8 +37,19 @@ class JourneyScreen extends ConsumerWidget {
                   child: Text('Your journey', style: TextStyles.screenTitle),
                 ),
                 const SizedBox(height: 26),
-                _Stats(journey: journey),
-                Expanded(child: _ConstellationMap(journey: journey)),
+                _Stats(
+                  journey: journey,
+                  onShare: switch (latestMilestone(journey.nightsCompleted)) {
+                    final m? => () => shareMilestone(context, ref, journey, m),
+                    null => null,
+                  },
+                ),
+                Expanded(
+                  child: _ConstellationMap(
+                    journey: journey,
+                    onMilestone: (m) => shareMilestone(context, ref, journey, m),
+                  ),
+                ),
               ],
             ),
     );
@@ -44,8 +57,11 @@ class JourneyScreen extends ConsumerWidget {
 }
 
 class _Stats extends StatelessWidget {
-  const _Stats({required this.journey});
+  const _Stats({required this.journey, this.onShare});
   final JourneyView journey;
+
+  /// Shares the latest milestone reached; null hides the button.
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +103,21 @@ class _Stats extends StatelessWidget {
           stat('${journey.streak}', 'DAY STREAK'),
           rule(),
           stat(formatReadTime(journey.secondsRead), 'READ'),
+          if (onShare != null)
+            Semantics(
+              button: true,
+              label: 'Share milestone',
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: onShare,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 40,
+                  height: 52,
+                  child: Center(child: LineIconView(LineIcon.share, size: 20, color: Tokens.parchmentDim)),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -94,8 +125,11 @@ class _Stats extends StatelessWidget {
 }
 
 class _ConstellationMap extends StatefulWidget {
-  const _ConstellationMap({required this.journey});
+  const _ConstellationMap({required this.journey, required this.onMilestone});
   final JourneyView journey;
+
+  /// Tapping a reached milestone's label shares its card.
+  final ValueChanged<int> onMilestone;
 
   @override
   State<_ConstellationMap> createState() => _ConstellationMapState();
@@ -121,6 +155,18 @@ class _ConstellationMapState extends State<_ConstellationMap> with SingleTickerP
       if (dist < bestDist) {
         bestDist = dist;
         best = day;
+      }
+    }
+    // a tap right on a star opens its night; a tap on a reached
+    // milestone's label shares that milestone
+    if (best == null || bestDist > 12) {
+      for (final m in ConstellationLayout.milestones) {
+        if (widget.journey.nightsCompleted < m) continue;
+        final p = _MapPainter.toCanvas(_layout.pointFor(m), size);
+        if (_MapPainter.labelRects(m, p).any((r) => r.inflate(6).contains(d.localPosition))) {
+          widget.onMilestone(m);
+          return;
+        }
       }
     }
     if (best != null) showNightSheet(context, best);
@@ -241,32 +287,42 @@ class _MapPainter extends CustomPainter {
       final p = toCanvas(layout.pointFor(m), size);
       final reached = lit.length >= m;
       if (m == 1000) _sparkle(canvas, p, 8, reached ? Tokens.amber : Tokens.amber.withValues(alpha: 0.7));
-      _label(
-        canvas,
-        '$m',
-        p +
-            switch (m) {
-              7 => const Offset(-26, -10),
-              1000 => const Offset(-14, 14),
-              _ => const Offset(-8, -26),
-            },
-        TextStyle(
-          fontFamily: Tokens.serif,
-          fontSize: 17,
-          color: m == 1000 ? Tokens.amber : Tokens.parchment.withValues(alpha: 0.85),
-        ),
-      );
-      if (reached) {
-        _label(
-          canvas,
-          ConstellationLayout.names[m]!.toUpperCase(),
-          p + const Offset(14, -6),
-          TextStyles.label(color: Tokens.amber, size: 9.5),
-        );
-      }
+      _label(canvas, '$m', p + _numberOffset(m), _numberStyle(m));
+      if (reached) _label(canvas, _name(m), p + _nameOffset, _nameStyle);
     }
 
     _landscape(canvas, size);
+  }
+
+  static Offset _numberOffset(int m) => switch (m) {
+    7 => const Offset(-26, -10),
+    1000 => const Offset(-14, 14),
+    _ => const Offset(-8, -26),
+  };
+
+  static TextStyle _numberStyle(int m) => TextStyle(
+    fontFamily: Tokens.serif,
+    fontSize: 17,
+    color: m == 1000 ? Tokens.amber : Tokens.parchment.withValues(alpha: 0.85),
+  );
+
+  static const _nameOffset = Offset(14, -6);
+  static final _nameStyle = TextStyles.label(color: Tokens.amber, size: 9.5);
+  static String _name(int m) => ConstellationLayout.names[m]!.toUpperCase();
+
+  /// Where milestone [m]'s number and name are drawn around its star at [p].
+  static List<Rect> labelRects(int m, Offset p) {
+    Rect rect(String text, Offset at, TextStyle style) {
+      final tp = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final r = at & tp.size;
+      tp.dispose();
+      return r;
+    }
+
+    return [rect('$m', p + _numberOffset(m), _numberStyle(m)), rect(_name(m), p + _nameOffset, _nameStyle)];
   }
 
   void _sky(Canvas canvas, Size size) {

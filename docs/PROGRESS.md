@@ -3,14 +3,42 @@
 This log tracks the build against the phases in [PRD.md](PRD.md). The newest
 entry is at the top.
 
-## 2026-10-14: Favourites (stage 1 community)
+## 2026-10-14: Stage 1 community (favourites and share cards) and illustration prompts
+
+Stage 1 of the community plan: everything that works without accounts or a backend.
 
 ### Done
+
+**Favourites**
 
 - [x] A `favorites` table (one row per work, with when it was saved). Schema version 2, with the first real migration: `onUpgrade` creates the table on existing installs. A test opens a version 1 database file, upgrades it, and checks that nights, progress, the streak, settings and highlights all survive.
 - [x] Reader: a ribbon bookmark next to "Aa". It fills in amber when the piece is a favourite. Tapping it gives a light haptic and sends `favorite_added` or `favorite_removed` with the piece's night.
 - [x] Library → Saved: favourites, newest first, as type and night, title and author. A tap opens the piece in the Reader. Swipe left to remove it.
 - [x] "Reset" in the debug menu also clears favourites.
+
+**Share cards**
+
+- [x] Share cards (`lib/features/share`): a 4:5 image, 1080 x 1350, in three kinds. A highlight shows the sentence over the work's engraving. A night shows the lit candle, "Night N complete", the pull quote and the three titles. A milestone shows its constellation, "Night 30", the constellation's name and the reading stats. Every card ends with the wordmark and "One story, one poem, one essay."
+- [x] A preview sheet with "Share" and "Close". "Share" renders the card to a PNG and opens the iOS share sheet through `share_plus`.
+- [x] Entry points: a share button on each Library highlight, "Share" on the "Highlight saved" snackbar in the reader, "Share" on Night complete, and on Journey a share button in the stats row plus a tap on a reached milestone's name on the map.
+- [x] Analytics: `share_card_opened` when the preview opens and `share_card_shared` when the share completes, each with `kind` and `day_number`.
+
+The three cards are rendered by the screenshot test: [highlight](screenshots/share-highlight.png), [night](screenshots/share-night.png) and [milestone](screenshots/share-milestone.png).
+
+### Decisions
+
+- **App name**: the wordmark and tagline live in `ShareBrand` in `share_card.dart`, because the final name is still open.
+- **Highlight night**: a highlight belongs to a work, not a night, so the card shows the first night that carries the work.
+- **Quote marks**: the card draws its own amber quote mark. Quote marks around the whole sentence are dropped, and quote marks inside the sentence are kept.
+- **Milestone figure**: night 7 shows the first-week figure. Later milestones show nine stars sampled along their stretch of the Journey path.
+- **Native setup**: `share_plus` adds an iOS plugin. No Podfile is committed, so CocoaPods picks the plugin up on the first Mac build and nothing else is needed.
+
+**Illustrations**
+
+- [x] [illustration-prompts.md](illustration-prompts.md): the style lock, prompt templates for Midjourney, GPT-image and SDXL/Flux, prompts for the 12 theme engravings and for all 21 pieces in nights 1 to 7, and the drop-in steps.
+- [x] `build_pack.py` uses `images/<work id>.webp` when it exists at 1x and 2x and falls back to the theme image. The measure report says which one each work got. `--version` bumps the pack version so installed apps pick up new art. `placeholder_art.py` no longer overwrites existing files without `--force`.
+- [ ] Generate and approve the real art. Decide whether the Nightingale card may keep the mockup's muted red rose (the style lock is amber only).
+
 
 ## 2026-10-03: Scaffold (phase 0 complete, most of phase 1, parts of phases 2 to 4)
 

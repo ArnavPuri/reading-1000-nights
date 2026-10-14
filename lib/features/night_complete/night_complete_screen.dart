@@ -6,8 +6,11 @@ import '../../core/providers.dart';
 import '../../core/router.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/candle.dart';
+import '../../core/widgets/line_icons.dart';
 import '../../data/reading_repository.dart';
 import '../../domain/local_date.dart';
+import '../share/share_card.dart';
+import '../share/share_sheet.dart';
 
 /// Lit candle, "Night N complete", one line from tonight's reading, and the
 /// week as seven dots. No confetti or sound: it should feel like closing a
@@ -42,6 +45,13 @@ class NightCompleteScreen extends ConsumerWidget {
               const Spacer(flex: 2),
               _WeekDots(week: week, today: today),
               const Spacer(flex: 2),
+              if (night != null)
+                TextButton.icon(
+                  onPressed: () => showSharePreview(context, ref, NightShare.of(night)),
+                  style: TextButton.styleFrom(foregroundColor: Tokens.parchmentDim),
+                  icon: LineIconView(LineIcon.share, size: 18, color: Tokens.parchmentDim),
+                  label: const Text('Share', style: TextStyle(fontSize: 17)),
+                ),
               TextButton(
                 onPressed: () => context.go(Routes.tonight),
                 style: TextButton.styleFrom(foregroundColor: Tokens.parchmentDim),
