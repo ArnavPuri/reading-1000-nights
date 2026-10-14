@@ -11,7 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:thousand_nights/core/theme.dart';
 import 'package:thousand_nights/data/database.dart';
+import 'package:thousand_nights/features/share/share_card.dart';
 
 import '../app_harness.dart';
 import '../helpers.dart';
@@ -42,6 +44,26 @@ Future<void> _precacheImages(WidgetTester tester) async {
 Future<AppDatabase> _db(WidgetTester tester) async {
   await tester.runAsync(loadAppFonts);
   return (await tester.runAsync(seededDb))!;
+}
+
+/// Renders one share card on its own at 1080 x 1350.
+Future<void> _shareCard(WidgetTester tester, String name, ShareCardData data) async {
+  tester.view.physicalSize = const Size(1080, 1350);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.runAsync(loadAppFonts);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(),
+      home: Center(
+        child: RepaintBoundary(key: _boundary, child: ShareCard(data)),
+      ),
+    ),
+  );
+  final image = data.imagePath;
+  if (image != null) await tester.runAsync(() => precacheImage(AssetImage(image), _boundary.currentContext!));
+  await _capture(tester, name);
 }
 
 void main() {
@@ -147,5 +169,38 @@ void main() {
     await pumpApp(tester, db, location: '/library', boundaryKey: _boundary);
     await _capture(tester, 'library');
     await tearDownApp(tester, db);
+  }, skip: !_enabled);
+
+  testWidgets('share-highlight', (tester) async {
+    final db = await _db(tester);
+    final work = (await tester.runAsync(() => repoFor(db).work('wilde-the-nightingale-and-the-rose')))!;
+    await tester.runAsync(db.close);
+    await _shareCard(
+      tester,
+      'share-highlight',
+      HighlightShare.of('“Ah, on what little things does happiness depend!', work, dayNumber: 1),
+    );
+  }, skip: !_enabled);
+
+  testWidgets('share-night', (tester) async {
+    final db = await _db(tester);
+    final repo = repoFor(db);
+    final night = (await tester.runAsync(() async {
+      await repo.debugJumpTo(7, testToday);
+      for (final p in (await repo.night(7))!.pieces) {
+        await repo.finishPiece(p.work.id, 7, now: testNow(), today: testToday);
+      }
+      return repo.night(7);
+    }))!;
+    await tester.runAsync(db.close);
+    await _shareCard(tester, 'share-night', NightShare.of(night));
+  }, skip: !_enabled);
+
+  testWidgets('share-milestone', (tester) async {
+    await _shareCard(
+      tester,
+      'share-milestone',
+      const MilestoneShare(milestone: 30, nightsCompleted: 30, streak: 30, longestStreak: 30),
+    );
   }, skip: !_enabled);
 }

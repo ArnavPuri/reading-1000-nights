@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/line_icons.dart';
 import '../../data/reading_repository.dart';
 import '../journey/journey_screen.dart';
+import '../share/share_sheet.dart';
 
 /// Unlocked nights, newest first, plus a Highlights view. Re-reading any
 /// past night is always allowed.
@@ -178,10 +180,32 @@ class _HighlightsList extends ConsumerWidget {
                     style: const TextStyle(fontSize: 19, height: 1.5, color: Tokens.parchment),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  '${h.work.title.toUpperCase()}  ·  ${h.work.author.toUpperCase()}',
-                  style: TextStyles.label(color: Tokens.parchmentDim, size: 10),
+                // the 44 pt share target supplies the gap above the attribution
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${h.work.title.toUpperCase()}  ·  ${h.work.author.toUpperCase()}',
+                        style: TextStyles.label(color: Tokens.parchmentDim, size: 10),
+                      ),
+                    ),
+                    Semantics(
+                      button: true,
+                      label: 'Share highlight',
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: () => shareHighlight(context, ref, h),
+                        behavior: HitTestBehavior.opaque,
+                        child: SizedBox.square(
+                          dimension: 44,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: LineIconView(LineIcon.share, size: 20, color: Tokens.parchmentDim),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

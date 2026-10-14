@@ -3,6 +3,25 @@
 This log tracks the build against the phases in [PRD.md](PRD.md). The newest
 entry is at the top.
 
+## 2026-10-14: Share cards
+
+### Done
+
+- [x] Share cards (`lib/features/share`): a 4:5 image, 1080 x 1350, in three kinds. A highlight shows the sentence over the work's engraving. A night shows the lit candle, "Night N complete", the pull quote and the three titles. A milestone shows its constellation, "Night 30", the constellation's name and the reading stats. Every card ends with the wordmark and "One story, one poem, one essay."
+- [x] A preview sheet with "Share" and "Close". "Share" renders the card to a PNG and opens the iOS share sheet through `share_plus`.
+- [x] Entry points: a share button on each Library highlight, "Share" on the "Highlight saved" snackbar in the reader, "Share" on Night complete, and on Journey a share button in the stats row plus a tap on a reached milestone's name on the map.
+- [x] Analytics: `share_card_opened` when the preview opens and `share_card_shared` when the share completes, each with `kind` and `day_number`.
+
+The three cards are rendered by the screenshot test: [highlight](screenshots/share-highlight.png), [night](screenshots/share-night.png) and [milestone](screenshots/share-milestone.png).
+
+### Decisions
+
+- **App name**: the wordmark and tagline live in `ShareBrand` in `share_card.dart`, because the final name is still open.
+- **Highlight night**: a highlight belongs to a work, not a night, so the card shows the first night that carries the work.
+- **Quote marks**: the card draws its own amber quote mark. Quote marks around the whole sentence are dropped, and quote marks inside the sentence are kept.
+- **Milestone figure**: night 7 shows the first-week figure. Later milestones show nine stars sampled along their stretch of the Journey path.
+- **Native setup**: `share_plus` adds an iOS plugin. No Podfile is committed, so CocoaPods picks the plugin up on the first Mac build and nothing else is needed.
+
 ## 2026-10-03: Scaffold (phase 0 complete, most of phase 1, parts of phases 2 to 4)
 
 ### Done

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thousand_nights/core/providers.dart';
 import 'package:thousand_nights/core/router.dart';
@@ -48,11 +49,17 @@ Future<void> loadAppFonts() async {
 }
 
 /// Pumps the real app over [db]. Call `repo.ensureToday` (or a debug jump)
-/// first to set up state.
-Future<void> pumpApp(WidgetTester tester, AppDatabase db, {String location = Routes.tonight, Key? boundaryKey}) async {
+/// first to set up state. [overrides] are added to the app's.
+Future<void> pumpApp(
+  WidgetTester tester,
+  AppDatabase db, {
+  String location = Routes.tonight,
+  Key? boundaryKey,
+  List<Override> overrides = const [],
+}) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db), clockProvider.overrideWithValue(testNow.call)],
+      overrides: [databaseProvider.overrideWithValue(db), clockProvider.overrideWithValue(testNow.call), ...overrides],
       child: RepaintBoundary(
         key: boundaryKey,
         child: ThousandNightsApp(router: buildRouter(initialLocation: location)),
