@@ -3,6 +3,15 @@
 This log tracks the build against the phases in [PRD.md](PRD.md). The newest
 entry is at the top.
 
+## 2026-10-14: Favourites (stage 1 community)
+
+### Done
+
+- [x] A `favorites` table (one row per work, with when it was saved). Schema version 2, with the first real migration: `onUpgrade` creates the table on existing installs. A test opens a version 1 database file, upgrades it, and checks that nights, progress, the streak, settings and highlights all survive.
+- [x] Reader: a ribbon bookmark next to "Aa". It fills in amber when the piece is a favourite. Tapping it gives a light haptic and sends `favorite_added` or `favorite_removed` with the piece's night.
+- [x] Library → Saved: favourites, newest first, as type and night, title and author. A tap opens the piece in the Reader. Swipe left to remove it.
+- [x] "Reset" in the debug menu also clears favourites.
+
 ## 2026-10-03: Scaffold (phase 0 complete, most of phase 1, parts of phases 2 to 4)
 
 ### Done
