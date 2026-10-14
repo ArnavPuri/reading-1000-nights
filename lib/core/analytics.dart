@@ -10,7 +10,12 @@ enum AnalyticsEvent {
   streakBroken('streak_broken'),
   paywallShown('paywall_shown'),
   trialStarted('trial_started'),
-  purchaseCompleted('purchase_completed');
+  purchaseCompleted('purchase_completed'),
+  // Stage 1 community: favourites and share cards.
+  favoriteAdded('favorite_added'),
+  favoriteRemoved('favorite_removed'),
+  shareCardOpened('share_card_opened'),
+  shareCardShared('share_card_shared');
 
   const AnalyticsEvent(this.name);
   final String name;

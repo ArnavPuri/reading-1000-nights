@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// The three tab-bar line icons: moon, open book, constellation.
-enum LineIcon { moon, book, constellation, clock, check, back, close }
+enum LineIcon { moon, book, constellation, clock, check, back, close, bookmark, share }
 
 class LineIconView extends StatelessWidget {
   const LineIconView(this.icon, {super.key, this.size = 26, required this.color, this.filled = false});
@@ -97,6 +97,37 @@ class _LineIconPainter extends CustomPainter {
         stroke.strokeWidth = s / 14;
         canvas.drawLine(Offset(s * .22, s * .22), Offset(s * .78, s * .78), stroke);
         canvas.drawLine(Offset(s * .78, s * .22), Offset(s * .22, s * .78), stroke);
+      case LineIcon.bookmark:
+        // A ribbon bookmark. Filled when the piece is a favourite.
+        final ribbon = Path()
+          ..moveTo(s * .26, s * .12)
+          ..lineTo(s * .74, s * .12)
+          ..lineTo(s * .74, s * .88)
+          ..lineTo(s * .5, s * .68)
+          ..lineTo(s * .26, s * .88)
+          ..close();
+        canvas.drawPath(ribbon, filled ? fill : (stroke..strokeWidth = s / 14));
+      case LineIcon.share:
+        // An open box with an arrow rising out of it.
+        stroke.strokeWidth = s / 14;
+        canvas.drawPath(
+          Path()
+            ..moveTo(s * .34, s * .4)
+            ..lineTo(s * .2, s * .4)
+            ..lineTo(s * .2, s * .88)
+            ..lineTo(s * .8, s * .88)
+            ..lineTo(s * .8, s * .4)
+            ..lineTo(s * .66, s * .4),
+          stroke,
+        );
+        canvas.drawLine(Offset(s * .5, s * .1), Offset(s * .5, s * .62), stroke);
+        canvas.drawPath(
+          Path()
+            ..moveTo(s * .34, s * .26)
+            ..lineTo(s * .5, s * .1)
+            ..lineTo(s * .66, s * .26),
+          stroke,
+        );
     }
   }
 
