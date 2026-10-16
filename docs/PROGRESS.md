@@ -3,6 +3,29 @@
 This log tracks the build against the phases in [PRD.md](PRD.md). The newest
 entry is at the top.
 
+## 2026-10-16: Reader: choose where a highlight starts and ends
+
+Feedback: a long-press highlighted the whole sentence, so there was no way to pick the start and end.
+
+### Done
+
+- [x] Long-press a word to select it. Two amber handles appear, and dragging either one grows or shrinks the selection a word at a time, with a selection click on each step. Sliding the finger after the long-press does the same without the handles. A selection can cross paragraphs and the drop cap. The screen scrolls when a handle is held near the top or bottom edge, and a magnifier shows the text under the finger.
+- [x] A menu above the selection, in the app's style (ink-raised, hairline border, Newsreader): **Highlight**, **Copy** and **Share**. Share opens the highlight share card. A tap elsewhere, or scrolling the selection off screen, dismisses it.
+- [x] Tap a highlight to select it, with **Remove**, **Copy** and **Share**. Dragging its handles resizes it, and the menu changes to **Highlight**.
+- [x] A new highlight that overlaps or touches an existing one merges with it into one stored highlight (`ReadingRepository.replaceHighlights`). Highlights still save `text_md` offsets. A highlight that spans paragraphs stores its text with a blank line between them.
+- [x] The "Highlight saved to your Library" snackbar with Share, and a light haptic on save, are unchanged.
+- [x] VoiceOver: each paragraph is one element, read in full (including the drop cap letter, which used to be skipped), with the custom actions "Highlight paragraph" and "Remove highlight".
+
+The selection is rendered by the screenshot test: [reader-selection](screenshots/reader-selection.png).
+
+### Decisions
+
+- **Word, not sentence**: a long-press selects one word, as in iOS, Books and Kindle. A starting sentence usually had to be trimmed at one end or both. Starting from a word, one long-press and slide covers a sentence.
+- **Our own selection layer, not `SelectionArea`**: `SelectionListener` does report usable offsets per paragraph. But `SelectableRegion` cannot select a range from code, which tapping a highlight needs. Its handles also move a character at a time with no haptics. So `reader_selection.dart` keeps the range as `text_md` offsets and finds the text under the finger with `RenderParagraph`. The handles and menu sit in the scrolling content, so they move with the text. A handle claims the touch as soon as it lands, so dragging it never scrolls the page.
+- **VoiceOver highlights paragraphs**: VoiceOver has no reading cursor inside a static paragraph, so "the current sentence" is not well defined. The paragraph is the unit VoiceOver focuses on and reads.
+- [ ] Try the handles, magnifier and auto-scroll on a real device. Widget tests drive the gestures, but they cannot check how the drag feels or how the haptics land.
+
+
 ## 2026-10-14: Stage 1 community (favourites and share cards) and illustration prompts
 
 Stage 1 of the community plan: everything that works without accounts or a backend.

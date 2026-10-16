@@ -41,6 +41,15 @@ Future<void> _precacheImages(WidgetTester tester) async {
   }
 }
 
+/// Global centre of [word] where it appears inside [phrase] on screen.
+Offset _wordAt(WidgetTester tester, String phrase, String word) {
+  final finder = find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText().contains(phrase));
+  final rp = tester.renderObject<RenderParagraph>(finder.first);
+  final i = rp.text.toPlainText().indexOf(phrase) + phrase.indexOf(word);
+  final box = rp.getBoxesForSelection(TextSelection(baseOffset: i, extentOffset: i + word.length)).first;
+  return rp.localToGlobal(box.toRect().center);
+}
+
 Future<AppDatabase> _db(WidgetTester tester) async {
   await tester.runAsync(loadAppFonts);
   return (await tester.runAsync(seededDb))!;
@@ -106,6 +115,24 @@ void main() {
     });
     await pumpApp(tester, db, location: '/read/1/$id', boundaryKey: _boundary);
     await _capture(tester, 'reader');
+    await tearDownApp(tester, db);
+  }, skip: !_enabled);
+
+  testWidgets('reader-selection', (tester) async {
+    usePhoneSize(tester);
+    final db = await _db(tester);
+    await tester.runAsync(() => repoFor(db).ensureToday(testToday));
+    await pumpApp(tester, db, location: '/read/1/wilde-the-nightingale-and-the-rose', boundaryKey: _boundary);
+    // from "yet" in the third paragraph to "lover" in the fourth
+    await tester.longPressAt(_wordAt(tester, 'yet for want', 'yet'));
+    await settle(tester);
+    final handle = tester.getCenter(find.byKey(const ValueKey('reader-selection-end-handle')));
+    await tester.timedDragFrom(
+      handle,
+      _wordAt(tester, 'a true lover', 'lover') - handle,
+      const Duration(milliseconds: 400),
+    );
+    await _capture(tester, 'reader-selection');
     await tearDownApp(tester, db);
   }, skip: !_enabled);
 
