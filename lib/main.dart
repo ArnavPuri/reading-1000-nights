@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'core/bootstrap.dart';
 import 'core/providers.dart';
+import 'core/reminders.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
 
@@ -25,13 +26,17 @@ Future<void> main() async {
   );
 }
 
-class ThousandNightsApp extends StatelessWidget {
+class ThousandNightsApp extends ConsumerWidget {
   const ThousandNightsApp({super.key, required this.router});
 
   final GoRouter router;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Keeps reminders scheduled for as long as the app runs.
+    ref.watch(reminderSyncProvider);
+    // Onboarding starts or ends: let the router's redirect move the user.
+    ref.listen(settingsProvider.select((s) => s.value?.onboardingDone), (_, _) => router.refresh());
     return MaterialApp.router(
       title: '1000 Nights',
       debugShowCheckedModeBanner: false,

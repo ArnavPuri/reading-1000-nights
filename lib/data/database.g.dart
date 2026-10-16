@@ -2463,6 +2463,17 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, SettingsRow
     defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("onboarding_done" IN (0, 1))'),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _streakReminderMeta = const VerificationMeta('streakReminder');
+  @override
+  late final GeneratedColumn<bool> streakReminder = GeneratedColumn<bool>(
+    'streak_reminder',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("streak_reminder" IN (0, 1))'),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _debugDayOffsetMeta = const VerificationMeta('debugDayOffset');
   @override
   late final GeneratedColumn<int> debugDayOffset = GeneratedColumn<int>(
@@ -2474,7 +2485,16 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, SettingsRow
     defaultValue: const Constant(0),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, reminderTime, theme, fontStep, lineStep, onboardingDone, debugDayOffset];
+  List<GeneratedColumn> get $columns => [
+    id,
+    reminderTime,
+    theme,
+    fontStep,
+    lineStep,
+    onboardingDone,
+    streakReminder,
+    debugDayOffset,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2505,6 +2525,12 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, SettingsRow
         onboardingDone.isAcceptableOrUnknown(data['onboarding_done']!, _onboardingDoneMeta),
       );
     }
+    if (data.containsKey('streak_reminder')) {
+      context.handle(
+        _streakReminderMeta,
+        streakReminder.isAcceptableOrUnknown(data['streak_reminder']!, _streakReminderMeta),
+      );
+    }
     if (data.containsKey('debug_day_offset')) {
       context.handle(
         _debugDayOffsetMeta,
@@ -2526,6 +2552,7 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, SettingsRow
       fontStep: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}font_step'])!,
       lineStep: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}line_step'])!,
       onboardingDone: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}onboarding_done'])!,
+      streakReminder: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}streak_reminder'])!,
       debugDayOffset: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}debug_day_offset'])!,
     );
   }
@@ -2543,6 +2570,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
   final int fontStep;
   final int lineStep;
   final bool onboardingDone;
+  final bool streakReminder;
   final int debugDayOffset;
   const SettingsRow({
     required this.id,
@@ -2551,6 +2579,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     required this.fontStep,
     required this.lineStep,
     required this.onboardingDone,
+    required this.streakReminder,
     required this.debugDayOffset,
   });
   @override
@@ -2564,6 +2593,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     map['font_step'] = Variable<int>(fontStep);
     map['line_step'] = Variable<int>(lineStep);
     map['onboarding_done'] = Variable<bool>(onboardingDone);
+    map['streak_reminder'] = Variable<bool>(streakReminder);
     map['debug_day_offset'] = Variable<int>(debugDayOffset);
     return map;
   }
@@ -2576,6 +2606,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       fontStep: Value(fontStep),
       lineStep: Value(lineStep),
       onboardingDone: Value(onboardingDone),
+      streakReminder: Value(streakReminder),
       debugDayOffset: Value(debugDayOffset),
     );
   }
@@ -2589,6 +2620,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       fontStep: serializer.fromJson<int>(json['fontStep']),
       lineStep: serializer.fromJson<int>(json['lineStep']),
       onboardingDone: serializer.fromJson<bool>(json['onboardingDone']),
+      streakReminder: serializer.fromJson<bool>(json['streakReminder']),
       debugDayOffset: serializer.fromJson<int>(json['debugDayOffset']),
     );
   }
@@ -2602,6 +2634,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       'fontStep': serializer.toJson<int>(fontStep),
       'lineStep': serializer.toJson<int>(lineStep),
       'onboardingDone': serializer.toJson<bool>(onboardingDone),
+      'streakReminder': serializer.toJson<bool>(streakReminder),
       'debugDayOffset': serializer.toJson<int>(debugDayOffset),
     };
   }
@@ -2613,6 +2646,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     int? fontStep,
     int? lineStep,
     bool? onboardingDone,
+    bool? streakReminder,
     int? debugDayOffset,
   }) => SettingsRow(
     id: id ?? this.id,
@@ -2621,6 +2655,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
     fontStep: fontStep ?? this.fontStep,
     lineStep: lineStep ?? this.lineStep,
     onboardingDone: onboardingDone ?? this.onboardingDone,
+    streakReminder: streakReminder ?? this.streakReminder,
     debugDayOffset: debugDayOffset ?? this.debugDayOffset,
   );
   SettingsRow copyWithCompanion(SettingsCompanion data) {
@@ -2631,6 +2666,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
       fontStep: data.fontStep.present ? data.fontStep.value : this.fontStep,
       lineStep: data.lineStep.present ? data.lineStep.value : this.lineStep,
       onboardingDone: data.onboardingDone.present ? data.onboardingDone.value : this.onboardingDone,
+      streakReminder: data.streakReminder.present ? data.streakReminder.value : this.streakReminder,
       debugDayOffset: data.debugDayOffset.present ? data.debugDayOffset.value : this.debugDayOffset,
     );
   }
@@ -2644,13 +2680,15 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
           ..write('fontStep: $fontStep, ')
           ..write('lineStep: $lineStep, ')
           ..write('onboardingDone: $onboardingDone, ')
+          ..write('streakReminder: $streakReminder, ')
           ..write('debugDayOffset: $debugDayOffset')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, reminderTime, theme, fontStep, lineStep, onboardingDone, debugDayOffset);
+  int get hashCode =>
+      Object.hash(id, reminderTime, theme, fontStep, lineStep, onboardingDone, streakReminder, debugDayOffset);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2661,6 +2699,7 @@ class SettingsRow extends DataClass implements Insertable<SettingsRow> {
           other.fontStep == this.fontStep &&
           other.lineStep == this.lineStep &&
           other.onboardingDone == this.onboardingDone &&
+          other.streakReminder == this.streakReminder &&
           other.debugDayOffset == this.debugDayOffset);
 }
 
@@ -2671,6 +2710,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
   final Value<int> fontStep;
   final Value<int> lineStep;
   final Value<bool> onboardingDone;
+  final Value<bool> streakReminder;
   final Value<int> debugDayOffset;
   const SettingsCompanion({
     this.id = const Value.absent(),
@@ -2679,6 +2719,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     this.fontStep = const Value.absent(),
     this.lineStep = const Value.absent(),
     this.onboardingDone = const Value.absent(),
+    this.streakReminder = const Value.absent(),
     this.debugDayOffset = const Value.absent(),
   });
   SettingsCompanion.insert({
@@ -2688,6 +2729,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     this.fontStep = const Value.absent(),
     this.lineStep = const Value.absent(),
     this.onboardingDone = const Value.absent(),
+    this.streakReminder = const Value.absent(),
     this.debugDayOffset = const Value.absent(),
   });
   static Insertable<SettingsRow> custom({
@@ -2697,6 +2739,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     Expression<int>? fontStep,
     Expression<int>? lineStep,
     Expression<bool>? onboardingDone,
+    Expression<bool>? streakReminder,
     Expression<int>? debugDayOffset,
   }) {
     return RawValuesInsertable({
@@ -2706,6 +2749,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
       if (fontStep != null) 'font_step': fontStep,
       if (lineStep != null) 'line_step': lineStep,
       if (onboardingDone != null) 'onboarding_done': onboardingDone,
+      if (streakReminder != null) 'streak_reminder': streakReminder,
       if (debugDayOffset != null) 'debug_day_offset': debugDayOffset,
     });
   }
@@ -2717,6 +2761,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     Value<int>? fontStep,
     Value<int>? lineStep,
     Value<bool>? onboardingDone,
+    Value<bool>? streakReminder,
     Value<int>? debugDayOffset,
   }) {
     return SettingsCompanion(
@@ -2726,6 +2771,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
       fontStep: fontStep ?? this.fontStep,
       lineStep: lineStep ?? this.lineStep,
       onboardingDone: onboardingDone ?? this.onboardingDone,
+      streakReminder: streakReminder ?? this.streakReminder,
       debugDayOffset: debugDayOffset ?? this.debugDayOffset,
     );
   }
@@ -2751,6 +2797,9 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
     if (onboardingDone.present) {
       map['onboarding_done'] = Variable<bool>(onboardingDone.value);
     }
+    if (streakReminder.present) {
+      map['streak_reminder'] = Variable<bool>(streakReminder.value);
+    }
     if (debugDayOffset.present) {
       map['debug_day_offset'] = Variable<int>(debugDayOffset.value);
     }
@@ -2766,6 +2815,7 @@ class SettingsCompanion extends UpdateCompanion<SettingsRow> {
           ..write('fontStep: $fontStep, ')
           ..write('lineStep: $lineStep, ')
           ..write('onboardingDone: $onboardingDone, ')
+          ..write('streakReminder: $streakReminder, ')
           ..write('debugDayOffset: $debugDayOffset')
           ..write(')'))
         .toString();

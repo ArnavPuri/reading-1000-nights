@@ -3,6 +3,51 @@
 This log tracks the build against the phases in [PRD.md](PRD.md). The newest
 entry is at the top.
 
+## 2026-10-16: Onboarding and reminders
+
+The rest of phase 2's habit work: a first run that teaches the card, and reminders at a time the user picks.
+
+### Done
+
+**Onboarding**
+
+- [x] Seven pages that cross-fade, moved on by the button or a swipe, with small dots for the page and "Skip" on the three explainer pages. Each page's elements fade in and drift up one after another on eased-out curves. Nothing bounces.
+- [x] Welcome: "A thousand nights. One story, one poem, one essay." over the candle engraving, which drifts slowly into place.
+- [x] How a night works: night 1's story on a real `ReadingCard`, with four callouts that arrive in turn on hairline leaders with amber dots: the type label (about 20 minutes a night), the read time, the engraving, and the done check. For the last one the card dims and the check draws itself in.
+- [x] In the reader: a small page with the bookmark, a highlighted sentence and the ribbon, then one line each for tap to read, the ribbon, long-press to highlight, the bookmark, and "Finish" lighting tonight's candle.
+- [x] Your candle and stars: the first week's figure lights star by star while the candle counts up, then the milestones at 7, 30, 100, 365 and 1000.
+- [x] When do you read? Morning, Evening and Before bed preset 8:00 am, 7:00 pm and 9:30 pm, and a wheel sets the exact time.
+- [x] Reminders asked in context: "We'll remind you at 9:30 pm.", with a preview of the real notification. "Allow" asks iOS and schedules; "Not now" leaves reminders off.
+- [x] "Begin night one" sets `onboarding_done`, sends `onboarding_completed` and opens Tonight. The router sends a new install to `/onboarding` until then.
+- [x] Debug menu: "Replay onboarding".
+
+**Reminders**
+
+- [x] `flutter_local_notifications`, `timezone` and `flutter_timezone`. `ReminderScheduler` (`lib/core/reminders.dart`) wraps the plugin behind an interface, so tests use a fake.
+- [x] The plan is a pure function (`lib/domain/reminder_plan.dart`). Copy is fixed when a notification is scheduled, so each of the next 7 days gets its own one-shot notification: "Night 12 is waiting" / "Tonight: The Gift of the Magi, Hope, On Reading and Books." Tonight's reminder lists only what is still unread and is dropped once all three are read.
+- [x] "Streak at risk" at 10 pm on a day nothing has been read, while the streak is alive: "Keep your 6-night streak" / "A poem takes a minute. The candle is still lit." Finishing a piece moves it to tomorrow.
+- [x] Times are planned on the wall clock and placed in the device's time zone, so 9:30 pm stays 9:30 pm across daylight saving and travel. The zone is read again on every resume.
+- [x] `ReminderSync` lives at the app's root and replans when reading state or the reminder settings change and on every resume. It only reschedules when the plan or the zone has changed.
+- [x] A reminders sheet from a new gear at the top right of Journey: the daily reminder and its time, and "Streak reminder at 10 pm". Turning either on asks for permission; if iOS says no, a calm line explains where to turn notifications on, with "Open Settings".
+- [x] `reminder_enabled` is sent when the daily reminder is turned on, with its time.
+- [x] `settings.streak_reminder` (default on). Schema version 3, with a migration tested from version 1 and from version 2.
+
+Screenshots: [welcome](screenshots/onboarding-welcome.png), [the card](screenshots/onboarding-card.png), [the reader](screenshots/onboarding-reader.png), [candle and stars](screenshots/onboarding-journey.png), [reading time](screenshots/onboarding-time.png), [reminders asked in context](screenshots/onboarding-notify.png), [night one](screenshots/onboarding-begin.png) and [the reminders sheet](screenshots/reminders.png).
+
+### Decisions
+
+- **Which night a reminder names**: the plan assumes nothing more is read until the app next runs, since any read reschedules. Under that assumption the night is known: night N stays until a piece of it is read, then N + 1 unlocks at midnight. Generic copy ("Tonight's story, poem and essay are ready.") is used only when tonight is not known.
+- **A lapsed reader** gets reminders for 7 days, then nothing until they open the app again.
+- **Reminders off** means `reminder_time` is null, as in the PRD schema. "Not now" in onboarding leaves it null.
+- **In the foreground** a reminder goes quietly to Notification Center, with no banner or sound.
+- **Trial offer**: not built (phase 3). A `TODO(paywall)` in `onboarding_screen.dart` marks where it goes, after the reminders page.
+- **Native setup**: `AppDelegate.swift` sets the `UNUserNotificationCenter` delegate, as the plugin's README asks. `SceneDelegate` needs nothing. No Podfile is committed; the plugins are picked up on the first Mac build.
+
+### Still to check on a device
+
+- [ ] The permission prompt, a reminder arriving at the chosen time, and the 10 pm reminder disappearing after a piece is read.
+- [ ] A reminder after changing time zone, and across a daylight saving change.
+
 ## 2026-10-16: Reader: choose where a highlight starts and ends
 
 Feedback: a long-press highlighted the whole sentence, so there was no way to pick the start and end.
@@ -95,8 +140,8 @@ The three cards are rendered by the screenshot test: [highlight](screenshots/sha
 - [x] Night unlock and streak rules as pure functions (`lib/domain`), with unit tests for midnight, time zone changes east and west, DST, missed days, freezes and the monthly refill.
 - [x] Journey: stats row, constellation renderer (nights 1–7 as a figure, then a path through 30, 100, 365 and 1000), milestone labels and constellation names, a newest-star lighting animation, and tap a lit star to open that night.
 - [x] An analytics event list and interface (`lib/core/analytics.dart`), with debug logging. The PostHog/Firebase choice is still open.
-- [ ] Onboarding flow, reading time and notification permission.
-- [ ] Daily reminder and "streak at risk" local notifications.
+- [x] Onboarding flow, reading time and notification permission (2026-10-16).
+- [x] Daily reminder and "streak at risk" local notifications (2026-10-16).
 
 **Phase 3 and 4 items pulled forward (cheap and visible in the mockups)**
 
@@ -133,7 +178,7 @@ The screenshots come from the real app, rendered headless by
 
 ### Next
 
-1. Phase 2: onboarding, local notifications, and the TestFlight 7-day self-test. This needs a Mac with Xcode, and the Daily Dharma notification code if it can be reused.
+1. Phase 2: the TestFlight 7-day self-test (onboarding and local notifications are built). This needs a Mac with Xcode.
 2. Phase 3: RevenueCat, the paywall at onboarding and night 8, and gating.
 3. Content: curate nights 8–30 for pack 1 against the balance rules.
 

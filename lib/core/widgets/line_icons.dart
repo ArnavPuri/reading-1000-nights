@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// The three tab-bar line icons: moon, open book, constellation.
-enum LineIcon { moon, book, constellation, clock, check, back, close, bookmark, share }
+enum LineIcon { moon, book, constellation, clock, check, back, close, bookmark, share, settings }
 
 class LineIconView extends StatelessWidget {
   const LineIconView(this.icon, {super.key, this.size = 26, required this.color, this.filled = false});
@@ -128,6 +128,29 @@ class _LineIconPainter extends CustomPainter {
             ..lineTo(s * .66, s * .26),
           stroke,
         );
+      case LineIcon.settings:
+        // A gear: eight square-shouldered teeth around a hub.
+        stroke.strokeWidth = s / 16;
+        const teeth = 8;
+        final c = Offset(s / 2, s / 2);
+        final outer = s * .43, inner = s * .33;
+        const step = 2 * math.pi / teeth;
+        Offset at(double r, double a) => c + Offset(math.cos(a), math.sin(a)) * r;
+        final gear = Path();
+        for (var i = 0; i < teeth; i++) {
+          final a = i * step - math.pi / 2;
+          final p0 = at(inner, a - step * .3), p1 = at(outer, a - step * .17);
+          final p2 = at(outer, a + step * .17), p3 = at(inner, a + step * .3);
+          i == 0 ? gear.moveTo(p0.dx, p0.dy) : gear.lineTo(p0.dx, p0.dy);
+          gear
+            ..lineTo(p1.dx, p1.dy)
+            ..arcToPoint(p2, radius: Radius.circular(outer))
+            ..lineTo(p3.dx, p3.dy);
+          final next = at(inner, a + step - step * .3);
+          gear.arcToPoint(next, radius: Radius.circular(inner));
+        }
+        canvas.drawPath(gear..close(), stroke);
+        canvas.drawCircle(c, s * .13, stroke);
     }
   }
 

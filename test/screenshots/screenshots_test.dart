@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:thousand_nights/core/router.dart';
 import 'package:thousand_nights/core/theme.dart';
 import 'package:thousand_nights/data/database.dart';
 import 'package:thousand_nights/features/share/share_card.dart';
@@ -195,6 +196,72 @@ void main() {
     await tester.runAsync(() => repoFor(db).debugJumpTo(7, testToday));
     await pumpApp(tester, db, location: '/library', boundaryKey: _boundary);
     await _capture(tester, 'library');
+    await tearDownApp(tester, db);
+  }, skip: !_enabled);
+
+  // Onboarding, page by page, after each page's entrance has played out.
+  Future<void> onboarding(WidgetTester tester, String name, List<String> taps) async {
+    usePhoneSize(tester);
+    final db = await _db(tester);
+    await tester.runAsync(() => repoFor(db).ensureToday(testToday));
+    await pumpApp(tester, db, onboardingDone: false, boundaryKey: _boundary);
+    await _precacheImages(tester);
+    for (final t in taps) {
+      await tester.tap(find.text(t));
+      await settle(tester);
+    }
+    await tester.pump(const Duration(seconds: 7));
+    await _capture(tester, name);
+    await tearDownApp(tester, db);
+  }
+
+  testWidgets('onboarding-welcome', (tester) => onboarding(tester, 'onboarding-welcome', []), skip: !_enabled);
+
+  testWidgets('onboarding-card', (tester) => onboarding(tester, 'onboarding-card', ['Begin']), skip: !_enabled);
+
+  testWidgets(
+    'onboarding-reader',
+    (tester) => onboarding(tester, 'onboarding-reader', ['Begin', 'Continue']),
+    skip: !_enabled,
+  );
+
+  testWidgets(
+    'onboarding-journey',
+    (tester) => onboarding(tester, 'onboarding-journey', ['Begin', 'Continue', 'Continue']),
+    skip: !_enabled,
+  );
+
+  testWidgets('onboarding-time', (tester) => onboarding(tester, 'onboarding-time', ['Begin', 'Skip']), skip: !_enabled);
+
+  testWidgets(
+    'onboarding-notify',
+    (tester) => onboarding(tester, 'onboarding-notify', ['Begin', 'Skip', 'Continue']),
+    skip: !_enabled,
+  );
+
+  testWidgets(
+    'onboarding-begin',
+    (tester) => onboarding(tester, 'onboarding-begin', ['Begin', 'Skip', 'Continue', 'Allow']),
+    skip: !_enabled,
+  );
+
+  testWidgets('reminders', (tester) async {
+    usePhoneSize(tester);
+    final db = await _db(tester);
+    await tester.runAsync(() async {
+      await repoFor(db).debugJumpTo(7, testToday);
+      await db.update(db.settings).write(const SettingsCompanion(reminderTime: Value('21:30')));
+    });
+    await pumpApp(
+      tester,
+      db,
+      location: Routes.journey,
+      boundaryKey: _boundary,
+      reminders: FakeReminderScheduler()..granted = true,
+    );
+    await tester.tap(find.bySemanticsLabel('Reminders'));
+    await settle(tester);
+    await _capture(tester, 'reminders');
     await tearDownApp(tester, db);
   }, skip: !_enabled);
 

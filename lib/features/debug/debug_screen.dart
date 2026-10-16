@@ -79,6 +79,11 @@ class DebugScreen extends ConsumerWidget {
             ),
           ),
           const Divider(),
+          // The router's redirect opens onboarding as soon as the flag drops.
+          action('Replay onboarding', () async {
+            final db = ref.read(databaseProvider);
+            await db.update(db.settings).write(const SettingsCompanion(onboardingDone: Value(false)));
+          }),
           action('Reset all state', () async {
             await ref.read(databaseProvider).resetUserState();
             await ref.read(settingsProvider.future);

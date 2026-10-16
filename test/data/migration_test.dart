@@ -35,6 +35,13 @@ const _v1Schema = [
       '"imported_at" INTEGER NOT NULL, PRIMARY KEY ("pack_id"))',
 ];
 
+/// Version 2 added favourites.
+const _v2Schema = [
+  ..._v1Schema,
+  'CREATE TABLE "favorites" ("work_id" TEXT NOT NULL REFERENCES works (id), "created_at" INTEGER NOT NULL, '
+      'PRIMARY KEY ("work_id"))',
+];
+
 /// A version 1 install with one night read and one highlight.
 const _v1Data = [
   "INSERT INTO works VALUES ('s1', 'story', 'A Story', 'An Author', 1900, 1000, 5, NULL, 'Once.', NULL, 'src', "
@@ -51,31 +58,47 @@ const _v1Data = [
       "1790000300)",
 ];
 
-/// Opens a file as drift would at schema version 1 and fills it in.
-class _V1Install extends QueryExecutorUser {
+/// A version 2 install: the same data plus a reminder time and a favourite.
+const _v2Data = [
+  ..._v1Data,
+  "UPDATE settings SET reminder_time = '21:30', onboarding_done = 1",
+  "INSERT INTO favorites VALUES ('s1', 1790000700)",
+];
+
+/// Opens a file as drift would at an old schema version and fills it in.
+class _OldInstall extends QueryExecutorUser {
+  _OldInstall(this.schemaVersion, this.statements);
+
   @override
-  int get schemaVersion => 1;
+  final int schemaVersion;
+  final List<String> statements;
 
   @override
   Future<void> beforeOpen(QueryExecutor executor, OpeningDetails details) async {
     await executor.ensureOpen(this);
-    for (final sql in [..._v1Schema, ..._v1Data]) {
+    for (final sql in statements) {
       await executor.runCustom(sql);
     }
   }
 }
 
-void main() {
-  test('upgrading from version 1 adds favourites and keeps existing data', () async {
-    final dir = await Directory.systemTemp.createTemp('nights-migration');
-    final file = File('${dir.path}/db.sqlite');
-    final v1 = NativeDatabase(file);
-    await v1.ensureOpen(_V1Install());
-    await v1.close();
+/// Writes an old install to a temporary file and opens it with the current
+/// schema, which runs the migration.
+Future<(AppDatabase, Directory)> _upgrade(int from, List<String> statements) async {
+  final dir = await Directory.systemTemp.createTemp('nights-migration');
+  final file = File('${dir.path}/db.sqlite');
+  final old = NativeDatabase(file);
+  await old.ensureOpen(_OldInstall(from, statements));
+  await old.close();
+  final db = AppDatabase(NativeDatabase(file));
+  final version = await db.customSelect('PRAGMA user_version').map((r) => r.read<int>('user_version')).getSingle();
+  expect(version, 3);
+  return (db, dir);
+}
 
-    final db = AppDatabase(NativeDatabase(file));
-    final version = await db.customSelect('PRAGMA user_version').map((r) => r.read<int>('user_version')).getSingle();
-    expect(version, 2);
+void main() {
+  test('upgrading from version 1 adds favourites and the streak reminder and keeps existing data', () async {
+    final (db, dir) = await _upgrade(1, [..._v1Schema, ..._v1Data]);
     final tables = await db
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'favorites'")
         .get();
@@ -86,11 +109,32 @@ void main() {
     expect([for (final p in night.pieces) p.work.title], ['A Story', 'A Poem', 'An Essay']);
     expect([for (final p in night.pieces) p.done], [false, true, false]);
     expect((await db.getStreak()).current, 1);
-    expect((await db.getSettings()).theme, 'sepia');
+    final settings = await db.getSettings();
+    expect(settings.theme, 'sepia');
+    expect(settings.streakReminder, isTrue);
     expect((await repo.allHighlights()).single.highlight.body, 'Lo.');
 
     expect(await repo.toggleFavorite('p1', now: DateTime(2026, 10, 14)), isTrue);
     expect((await repo.favorites()).single.dayNumber, 1);
+
+    await db.close();
+    await dir.delete(recursive: true);
+  });
+
+  test('upgrading from version 2 adds the streak reminder and keeps settings and favourites', () async {
+    final (db, dir) = await _upgrade(2, [..._v2Schema, ..._v2Data]);
+
+    final settings = await db.getSettings();
+    expect(settings.theme, 'sepia');
+    expect(settings.reminderTime, '21:30');
+    expect(settings.onboardingDone, isTrue);
+    expect(settings.streakReminder, isTrue);
+    await db.update(db.settings).write(const SettingsCompanion(streakReminder: Value(false)));
+    expect((await db.getSettings()).streakReminder, isFalse);
+
+    final repo = ReadingRepository(db);
+    expect((await repo.favorites()).single.work.id, 's1');
+    expect((await db.getStreak()).current, 1);
 
     await db.close();
     await dir.delete(recursive: true);
