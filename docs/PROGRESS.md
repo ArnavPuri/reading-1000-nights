@@ -3,6 +3,12 @@
 This log tracks the build against the phases in [PRD.md](PRD.md). The newest
 entry is at the top.
 
+## 2026-10-16: App icon and launch film
+
+- [x] App icon: the candle-and-book artwork, scaled onto its own ink ground so the book clears the iOS corner mask. Master at `assets/branding/app-icon-1024.png`.
+- [x] Launch film in [marketing/launch-video](../marketing/launch-video/): a 39.5 s cut at 9:16 and 16:9, a 7 s 1:1 loop, and posters. The [storyboard](../marketing/launch-video/STORYBOARD.md) has the shot list, the animation principles per shot and the sound cue sheet. Every frame renders from code, so the film can be re-rendered when the screens or art change.
+- [ ] Listen to the synthesised ambient bed before posting (it was made from sine tones and noise, no samples), or re-render with `--no-audio`.
+
 ## 2026-10-16: Onboarding and reminders
 
 The rest of phase 2's habit work: a first run that teaches the card, and reminders at a time the user picks.
