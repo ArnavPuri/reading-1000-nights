@@ -1,15 +1,18 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thousand_nights/core/providers.dart';
+import 'package:thousand_nights/core/reminders.dart';
 import 'package:thousand_nights/core/router.dart';
 import 'package:thousand_nights/data/database.dart';
 import 'package:thousand_nights/data/reading_repository.dart';
 import 'package:thousand_nights/domain/local_date.dart';
+import 'package:thousand_nights/domain/reminder_plan.dart';
 import 'package:thousand_nights/main.dart';
 
 const testNow = _Now();
@@ -48,18 +51,67 @@ Future<void> loadAppFonts() async {
   await display.load();
 }
 
+/// Stands in for the notifications plugin: records what the app asks of it.
+class FakeReminderScheduler implements ReminderScheduler {
+  FakeReminderScheduler({this.allow = true, this.zone = 'Europe/London'});
+
+  /// What the user answers when asked for permission.
+  bool allow;
+  String zone;
+  var granted = false;
+  var permissionRequests = 0;
+  var zoneReads = 0;
+  var settingsOpened = 0;
+
+  /// Every plan handed over, oldest first.
+  final plans = <List<PlannedReminder>>[];
+
+  List<PlannedReminder> get scheduled => plans.isEmpty ? const [] : plans.last;
+
+  @override
+  Future<String> refreshTimeZone() async {
+    zoneReads++;
+    return zone;
+  }
+
+  @override
+  Future<bool> hasPermission() async => granted;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return granted = allow;
+  }
+
+  @override
+  Future<void> openSystemSettings() async => settingsOpened++;
+
+  @override
+  Future<void> replaceAll(List<PlannedReminder> plan) async => plans.add(plan);
+}
+
 /// Pumps the real app over [db]. Call `repo.ensureToday` (or a debug jump)
-/// first to set up state. [overrides] are added to the app's.
+/// first to set up state. [overrides] are added to the app's. Onboarding is
+/// marked done unless [onboardingDone] is false, which starts the app as a
+/// fresh install. Reminders go to [reminders] (a new fake by default).
 Future<void> pumpApp(
   WidgetTester tester,
   AppDatabase db, {
   String location = Routes.tonight,
   Key? boundaryKey,
   List<Override> overrides = const [],
+  bool onboardingDone = true,
+  FakeReminderScheduler? reminders,
 }) async {
+  await tester.runAsync(() => db.update(db.settings).write(SettingsCompanion(onboardingDone: Value(onboardingDone))));
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [databaseProvider.overrideWithValue(db), clockProvider.overrideWithValue(testNow.call), ...overrides],
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        clockProvider.overrideWithValue(testNow.call),
+        reminderSchedulerProvider.overrideWithValue(reminders ?? FakeReminderScheduler()),
+        ...overrides,
+      ],
       child: RepaintBoundary(
         key: boundaryKey,
         child: ThousandNightsApp(router: buildRouter(initialLocation: location)),

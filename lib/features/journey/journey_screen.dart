@@ -9,6 +9,7 @@ import '../../core/router.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/line_icons.dart';
 import '../../data/reading_repository.dart';
+import '../reminders/reminders_sheet.dart';
 import '../share/share_sheet.dart';
 import '../tonight/reading_card.dart';
 import 'constellation.dart';
@@ -32,9 +33,26 @@ class JourneyScreen extends ConsumerWidget {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(Tokens.gutter, 36, Tokens.gutter, 0),
-                  child: Text('Your journey', style: TextStyles.screenTitle),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Tokens.gutter, 36, Tokens.gutter - 12, 0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('Your journey', style: TextStyles.screenTitle)),
+                      Semantics(
+                        button: true,
+                        label: 'Reminders',
+                        excludeSemantics: true,
+                        child: GestureDetector(
+                          onTap: () => showRemindersSheet(context),
+                          behavior: HitTestBehavior.opaque,
+                          child: SizedBox.square(
+                            dimension: 44,
+                            child: Center(child: LineIconView(LineIcon.settings, size: 22, color: Tokens.parchmentDim)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 26),
                 _Stats(

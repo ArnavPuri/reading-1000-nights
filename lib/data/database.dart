@@ -108,6 +108,9 @@ class Settings extends Table {
   IntColumn get fontStep => integer().withDefault(const Constant(2))(); // 0..4
   IntColumn get lineStep => integer().withDefault(const Constant(1))(); // 0..2
   BoolColumn get onboardingDone => boolean().withDefault(const Constant(false))();
+  // Not in the PRD schema: the "streak at risk" reminder at 10 pm. Added in
+  // schema version 3.
+  BoolColumn get streakReminder => boolean().withDefault(const Constant(true))();
   // Debug only: shifts "today" so a tester can walk through nights.
   IntColumn get debugDayOffset => integer().withDefault(const Constant(0))();
 
@@ -131,7 +134,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -142,6 +145,7 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) await m.createTable(favorites);
+      if (from < 3) await m.addColumn(settings, settings.streakReminder);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
