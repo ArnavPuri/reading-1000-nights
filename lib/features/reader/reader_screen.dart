@@ -16,10 +16,11 @@ import '../../data/reading_repository.dart';
 import '../share/share_card.dart';
 import '../share/share_sheet.dart';
 import 'md_text.dart';
+import 'reader_selection.dart';
 import 'reader_settings_sheet.dart';
 
 /// Title and author in small caps, ornamental drop cap, serif body, amber
-/// ribbon progress, long-press to highlight, "Finish" at the end.
+/// ribbon progress, long-press to select and highlight, "Finish" at the end.
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({super.key, required this.dayNumber, required this.workId});
 
@@ -34,6 +35,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
   final _scroll = ScrollController();
   final _progress = ValueNotifier<double>(0);
   final _clock = Stopwatch();
+  final _viewportKey = GlobalKey();
+  late final _selection = ReaderSelection(scroll: _scroll, viewportKey: _viewportKey);
   late final ReadingRepository _repo;
 
   Work? _work;
@@ -60,6 +63,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     setState(() {
       _work = work;
       _blocks = parseMarkdown(work.textMd, verse: work.type == 'poem');
+      _selection.blocks = _blocks;
       _savedPos = progress?.completedAt != null ? 0 : (progress?.scrollPos ?? 0);
     });
     _clock.start();
@@ -78,6 +82,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     if (!_scroll.hasClients) return;
     final max = _scroll.position.maxScrollExtent;
     _progress.value = max <= 0 ? 1 : (_scroll.offset / max).clamp(0, 1);
+    _selection.dismissIfOffscreen();
     _saveDebounce?.cancel();
     _saveDebounce = Timer(const Duration(seconds: 2), _save);
   }
@@ -109,6 +114,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _saveDebounce?.cancel();
     _save();
+    _selection.dispose();
     _scroll.dispose();
     _progress.dispose();
     super.dispose();
@@ -136,21 +142,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     }
   }
 
-  Future<void> _toggleHighlight(MdBlock block, int plainIndex, List<Highlight> existing) async {
-    final (a, b) = block.sentenceAt(plainIndex);
-    if (b <= a) return;
-    final mdA = block.mdOffsetOf(a);
-    final mdB = block.mdOffsetOf(b);
-    HapticFeedback.selectionClick();
-    final hit = existing.where((h) => h.startOffset < mdB && h.endOffset > mdA).toList();
-    if (hit.isNotEmpty) {
-      for (final h in hit) {
-        await _repo.removeHighlight(h.id);
-      }
-      return;
-    }
-    final text = block.plain.substring(a, b);
-    await _repo.addHighlight(widget.workId, mdA, mdB, text);
+  /// Saves [start, end) as a highlight, merged with any it overlaps. A
+  /// resized highlight ([replacing]) is swapped for the new range.
+  Future<void> _saveHighlight(int start, int end, {int? replacing}) async {
+    final m = mergeHighlight(start, end, [
+      for (final h in _selection.highlights) (id: h.id, start: h.startOffset, end: h.endOffset),
+    ], replacing: replacing);
+    final text = _blocks.textOf(m.start, m.end);
+    if (text.trim().isEmpty) return;
+    HapticFeedback.lightImpact();
+    await _repo.replaceHighlights(widget.workId, m.remove, m.start, m.end, text);
     if (!mounted) return;
     final work = _work;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -159,15 +160,82 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
         duration: const Duration(seconds: 4),
         action: work == null
             ? null
-            : SnackBarAction(
-                label: 'Share',
-                textColor: ReaderTheme.paper.accent,
-                onPressed: () =>
-                    showSharePreview(context, ref, HighlightShare.of(text, work, dayNumber: widget.dayNumber)),
-              ),
+            : SnackBarAction(label: 'Share', textColor: ReaderTheme.paper.accent, onPressed: () => _share(text)),
       ),
     );
   }
+
+  void _share(String text) {
+    final work = _work;
+    if (work == null) return;
+    showSharePreview(context, ref, HighlightShare.of(text, work, dayNumber: widget.dayNumber));
+  }
+
+  /// The menu over the selection: Remove for a stored highlight, else
+  /// Highlight. Each action ends the selection.
+  List<SelectionAction> _menu() {
+    final (start, end) = _selection.range!;
+    final text = _blocks.textOf(start, end);
+    final id = _selection.highlightId;
+    void done() => _selection.clear();
+    return [
+      if (_selection.isStoredHighlight)
+        (
+          label: 'Remove',
+          onTap: () {
+            done();
+            HapticFeedback.selectionClick();
+            _repo.removeHighlight(id!);
+          },
+        )
+      else
+        (
+          label: 'Highlight',
+          onTap: () {
+            done();
+            _saveHighlight(start, end, replacing: id);
+          },
+        ),
+      (
+        label: 'Copy',
+        onTap: () {
+          done();
+          Clipboard.setData(ClipboardData(text: text));
+        },
+      ),
+      (
+        label: 'Share',
+        onTap: () {
+          done();
+          _share(text);
+        },
+      ),
+    ];
+  }
+
+  /// VoiceOver cannot drag handles, so each paragraph has actions to
+  /// highlight all of it, or remove the highlights in it.
+  Map<CustomSemanticsAction, VoidCallback> _paragraphActions(int i, List<Highlight> highlights) {
+    final b = _blocks[i];
+    final inside = [
+      for (final h in highlights)
+        if (b.plainRangeOf(h.startOffset, h.endOffset) != null) h,
+    ];
+    return {
+      _highlightParagraph: () => _saveHighlight(b.mdStart, b.mdEnd),
+      if (inside.isNotEmpty)
+        _removeHighlight: () async {
+          for (final h in inside) {
+            await _repo.removeHighlight(h.id);
+          }
+        },
+    };
+  }
+
+  static const _highlightParagraph = CustomSemanticsAction(label: 'Highlight paragraph');
+  static const _removeHighlight = CustomSemanticsAction(label: 'Remove highlight');
+
+  static const _textInsets = EdgeInsets.fromLTRB(26, 28, 34, 48);
 
   @override
   Widget build(BuildContext context) {
@@ -176,6 +244,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     final fontSize = readerFontSizes[(settings?.fontStep ?? 2).clamp(0, readerFontSizes.length - 1)];
     final lineHeight = readerLineHeights[(settings?.lineStep ?? 1).clamp(0, readerLineHeights.length - 1)];
     final highlights = ref.watch(workHighlightsProvider(widget.workId)).value ?? const [];
+    _selection.highlights = highlights;
     final work = _work;
 
     final body = TextStyle(fontFamily: Tokens.serif, fontSize: fontSize, height: lineHeight, color: theme.text);
@@ -196,48 +265,85 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
                   HapticFeedback.lightImpact();
                   _repo.toggleFavorite(widget.workId, now: ref.read(clockProvider)());
                 },
-                onSettings: () => showReaderSettings(context, ref),
+                onSettings: () {
+                  _selection.clear();
+                  showReaderSettings(context, ref);
+                },
               ),
               Expanded(
                 child: work == null
                     ? const SizedBox()
                     : Stack(
                         children: [
-                          Scrollbar(
-                            controller: _scroll,
-                            thickness: 0,
-                            child: SingleChildScrollView(
+                          GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            // VoiceOver gets the paragraph actions instead
+                            excludeFromSemantics: true,
+                            onTapUp: (d) => _selection.tap(d.globalPosition),
+                            onLongPressStart: (d) => _selection.longPressStart(d.globalPosition),
+                            onLongPressMoveUpdate: (d) => _selection.longPressMove(d.globalPosition),
+                            onLongPressEnd: (_) => _selection.longPressEnd(),
+                            child: Scrollbar(
                               controller: _scroll,
-                              padding: const EdgeInsets.fromLTRB(26, 28, 34, 48),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _TitleBlock(work: work, theme: theme),
-                                  const SizedBox(height: 30),
-                                  for (var i = 0; i < _blocks.length; i++)
+                              thickness: 0,
+                              child: SingleChildScrollView(
+                                key: _viewportKey,
+                                controller: _scroll,
+                                child: Stack(
+                                  children: [
                                     Padding(
-                                      padding: EdgeInsets.only(bottom: fontSize * (_blocks[i].verse ? 1.2 : 1.1)),
-                                      child: i == 0 && !_blocks[i].verse
-                                          ? _DropCapBlock(
-                                              block: _blocks[i],
-                                              style: body,
-                                              theme: theme,
-                                              highlights: highlights,
-                                              onLongPress: (idx) => _toggleHighlight(_blocks[i], idx, highlights),
-                                            )
-                                          : _BlockText(
-                                              block: _blocks[i],
-                                              from: 0,
-                                              to: _blocks[i].plain.length,
-                                              style: body,
-                                              theme: theme,
-                                              highlights: highlights,
-                                              onLongPress: (idx) => _toggleHighlight(_blocks[i], idx, highlights),
+                                      padding: _textInsets,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          _TitleBlock(work: work, theme: theme),
+                                          const SizedBox(height: 30),
+                                          for (var i = 0; i < _blocks.length; i++)
+                                            Semantics(
+                                              container: true,
+                                              label: _blocks[i].plain,
+                                              excludeSemantics: true,
+                                              customSemanticsActions: _paragraphActions(i, highlights),
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                  bottom: fontSize * (_blocks[i].verse ? 1.2 : 1.1),
+                                                ),
+                                                child: i == 0 && !_blocks[i].verse
+                                                    ? _DropCapBlock(
+                                                        index: i,
+                                                        block: _blocks[i],
+                                                        style: body,
+                                                        theme: theme,
+                                                        highlights: highlights,
+                                                        selection: _selection,
+                                                      )
+                                                    : _BlockText(
+                                                        index: i,
+                                                        block: _blocks[i],
+                                                        from: 0,
+                                                        to: _blocks[i].plain.length,
+                                                        style: body,
+                                                        theme: theme,
+                                                        highlights: highlights,
+                                                        selection: _selection,
+                                                      ),
+                                              ),
                                             ),
+                                          const SizedBox(height: 24),
+                                          _FinishButton(theme: theme, onTap: _finish),
+                                        ],
+                                      ),
                                     ),
-                                  const SizedBox(height: 24),
-                                  _FinishButton(theme: theme, onTap: _finish),
-                                ],
+                                    Positioned.fill(
+                                      child: ReaderSelectionOverlay(
+                                        selection: _selection,
+                                        color: theme.accent,
+                                        textInsets: _textInsets,
+                                        actions: _menu,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -368,31 +474,66 @@ class _TitleBlock extends StatelessWidget {
   }
 }
 
-/// A block (or a slice of one) as one paragraph. Long-press reports the
-/// plain index under the finger.
-class _BlockText extends StatelessWidget {
-  _BlockText({
+/// A block (or a slice of one) as one paragraph, with any highlight that
+/// overlaps it and the selection painted behind it.
+class _BlockText extends StatefulWidget {
+  const _BlockText({
+    required this.index,
     required this.block,
     required this.from,
     required this.to,
     required this.style,
     required this.theme,
     required this.highlights,
-    required this.onLongPress,
+    required this.selection,
   });
 
+  final int index;
   final MdBlock block;
   final int from;
   final int to;
   final TextStyle style;
   final ReaderTheme theme;
   final List<Highlight> highlights;
-  final ValueChanged<int> onLongPress;
+  final ReaderSelection selection;
+
+  @override
+  State<_BlockText> createState() => _BlockTextState();
+}
+
+class _BlockTextState extends State<_BlockText> {
   final _key = GlobalKey();
+  late ReaderSlice _slice;
+
+  @override
+  void initState() {
+    super.initState();
+    _slice = widget.selection.attach(widget.index, widget.from, widget.to, _key);
+  }
+
+  @override
+  void didUpdateWidget(_BlockText old) {
+    super.didUpdateWidget(old);
+    if (old.selection != widget.selection) {
+      old.selection.detach(_slice);
+      _slice = widget.selection.attach(widget.index, widget.from, widget.to, _key);
+    }
+    _slice
+      ..block = widget.index
+      ..from = widget.from
+      ..to = widget.to;
+  }
+
+  @override
+  void dispose() {
+    widget.selection.detach(_slice);
+    super.dispose();
+  }
 
   List<InlineSpan> _spans() {
+    final block = widget.block;
     final marked = List<bool>.filled(block.plain.length, false);
-    for (final h in highlights) {
+    for (final h in widget.highlights) {
       final r = block.plainRangeOf(h.startOffset, h.endOffset);
       if (r == null) continue;
       for (var i = r.$1; i < r.$2; i++) {
@@ -400,17 +541,20 @@ class _BlockText extends StatelessWidget {
       }
     }
     final spans = <InlineSpan>[];
-    var i = from;
-    while (i < to) {
+    var i = widget.from;
+    while (i < widget.to) {
       final it = block.italicAt(i), hl = marked[i];
       var j = i + 1;
-      while (j < to && block.italicAt(j) == it && marked[j] == hl) {
+      while (j < widget.to && block.italicAt(j) == it && marked[j] == hl) {
         j++;
       }
       spans.add(
         TextSpan(
           text: block.plain.substring(i, j),
-          style: TextStyle(fontStyle: it ? FontStyle.italic : null, backgroundColor: hl ? theme.highlight : null),
+          style: TextStyle(
+            fontStyle: it ? FontStyle.italic : null,
+            backgroundColor: hl ? widget.theme.highlight : null,
+          ),
         ),
       );
       i = j;
@@ -420,17 +564,12 @@ class _BlockText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onLongPressStart: (d) {
-        final rp = _key.currentContext?.findRenderObject();
-        if (rp is! RenderParagraph) return;
-        final pos = rp.getPositionForOffset(rp.globalToLocal(d.globalPosition)).offset;
-        onLongPress(from + pos);
-      },
+    return CustomPaint(
+      painter: SelectionPainter(widget.selection, _slice, widget.theme.accent.withValues(alpha: 0.34)),
       child: RichText(
         key: _key,
         textScaler: MediaQuery.textScalerOf(context),
-        text: TextSpan(style: style, children: _spans()),
+        text: TextSpan(style: widget.style, children: _spans()),
       ),
     );
   }
@@ -439,20 +578,22 @@ class _BlockText extends StatelessWidget {
 /// First paragraph with an ornamental drop cap three lines tall.
 class _DropCapBlock extends StatelessWidget {
   const _DropCapBlock({
+    required this.index,
     required this.block,
     required this.style,
     required this.theme,
     required this.highlights,
-    required this.onLongPress,
+    required this.selection,
   });
 
   static const _lines = 3;
 
+  final int index;
   final MdBlock block;
   final TextStyle style;
   final ReaderTheme theme;
   final List<Highlight> highlights;
-  final ValueChanged<int> onLongPress;
+  final ReaderSelection selection;
 
   @override
   Widget build(BuildContext context) {
@@ -464,13 +605,14 @@ class _DropCapBlock extends StatelessWidget {
     }
     if (capAt >= s.length) {
       return _BlockText(
+        index: index,
         block: block,
         from: 0,
         to: s.length,
         style: style,
         theme: theme,
         highlights: highlights,
-        onLongPress: onLongPress,
+        selection: selection,
       );
     }
     final scaler = MediaQuery.textScalerOf(context);
@@ -525,26 +667,28 @@ class _DropCapBlock extends StatelessWidget {
                 const SizedBox(width: gap),
                 Expanded(
                   child: _BlockText(
+                    index: index,
                     block: block,
                     from: restFrom,
                     to: split,
                     style: style,
                     theme: theme,
                     highlights: highlights,
-                    onLongPress: onLongPress,
+                    selection: selection,
                   ),
                 ),
               ],
             ),
             if (after < s.length)
               _BlockText(
+                index: index,
                 block: block,
                 from: after,
                 to: s.length,
                 style: style,
                 theme: theme,
                 highlights: highlights,
-                onLongPress: onLongPress,
+                selection: selection,
               ),
           ],
         );

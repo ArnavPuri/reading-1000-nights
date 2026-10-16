@@ -312,6 +312,15 @@ class ReadingRepository {
 
   Future<void> removeHighlight(int id) => (db.delete(db.highlights)..where((h) => h.id.equals(id))).go();
 
+  /// Removes [removeIds] and stores one highlight in their place, in one
+  /// transaction: how the reader merges overlapping highlights.
+  Future<int> replaceHighlights(String workId, List<int> removeIds, int start, int end, String text) {
+    return db.transaction(() async {
+      await (db.delete(db.highlights)..where((h) => h.id.isIn(removeIds))).go();
+      return addHighlight(workId, start, end, text);
+    });
+  }
+
   /// Adds or removes [workId] from the favourites. Returns the new state.
   Future<bool> toggleFavorite(String workId, {required DateTime now}) async {
     final added = await db.transaction(() async {
