@@ -57,7 +57,7 @@ The app has three tabs and three flows around them. Tonight, Reader and Journey 
 
 - Title and author in small caps, an ornamental drop cap, serif body text.
 - The amber ribbon on the right edge shows scroll progress.
-- Long-press selects a sentence to highlight. Highlights are saved to the Library.
+- Long-press selects a word; drag the two handles to choose where a highlight starts and ends, across paragraphs if needed. A small menu offers Highlight, Copy and Share. Highlights are saved to the Library.
 - "Aa" opens type size (5 steps), line spacing (3 steps) and theme (Night, Sepia, Paper).
 - A piece counts as read when the user reaches the end and taps "Finish". Scroll position is saved if they leave early.
 - The tab bar hides while reading. The mockup shows it, but it competes with the text.
